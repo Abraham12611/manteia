@@ -1,0 +1,34 @@
+{
+  "name": "manteia",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "hardhat run scripts/deploy-markets.js --network mantle_sepolia",
+    "deploy:local": "hardhat run scripts/deploy-markets.js --network localhost",
+    "bot:start": "hardhat run scripts/resolution-bot.js --network mantle_sepolia",
+    "bot:test": "node scripts/test-resolution-bot.js",
+    "markets:find": "node scripts/find-polymarket-markets.js",
+    "markets:find:politics": "node scripts/find-polymarket-markets.js --tag Politics",
+    "markets:find:crypto": "node scripts/find-polymarket-markets.js --tag Crypto",
+    "hardhat:node": "hardhat node",
+    "compile": "hardhat compile"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@hyperlane-xyz/core": "^9.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.9",
+    "@nomicfoundation/hardhat-toolbox": "^6.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.14",
+    "@openzeppelin/contracts": "^4.9.3",
+    "dotenv": "^17.2.0",
+    "ethers": "^6.15.0",
+    "hardhat": "^2.25.0"
+  },
+  "dependencies": {
+    "axios": "^1.10.0"
+  }
+}
