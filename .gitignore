@@ -45,3 +45,7 @@ build/
 CHANGELOG.md
 manteia-build-protocol.mdc
 RESOLUTION_BOT_QUICKSTART.md
+RESOLUTION_BOT_FIXES.md
+frontend/CREATE_ENV_FILE.md
+frontend/ENV_SETUP.md
+frontend/REOWN_IMPLEMENTATION_FIXES.md

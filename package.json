@@ -9,6 +9,7 @@
     "bot:start": "hardhat run scripts/resolution-bot.js --network mantle_sepolia",
     "bot:test": "node scripts/test-resolution-bot.js",
     "markets:find": "node scripts/find-polymarket-markets.js",
+    "markets:find:recent": "node scripts/find-recent-markets.js",
     "markets:find:politics": "node scripts/find-polymarket-markets.js --tag Politics",
     "markets:find:crypto": "node scripts/find-polymarket-markets.js --tag Crypto",
     "hardhat:node": "hardhat node",
