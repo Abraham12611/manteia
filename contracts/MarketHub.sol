@@ -63,3 +63,4 @@ contract MarketHub is ERC1155 {
         marketResolved[marketId] = true;
         marketOutcome[marketId] = outcome;
     }
+}

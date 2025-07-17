@@ -68,8 +68,8 @@ function saveResolvedMarkets() {
 // Fetch market information from Polymarket
 async function fetchMarketInfo(marketId) {
   try {
-    // Try CLOB API first
-    const clobResponse = await rateLimitedRequest(async () => {
+    // Try CLOB API market endpoint
+    const marketResponse = await rateLimitedRequest(async () => {
       return axios.get(`${config.polymarketApiUrl}/markets/${marketId}`, {
         headers: {
           'Accept': 'application/json',
@@ -78,19 +78,19 @@ async function fetchMarketInfo(marketId) {
       });
     });
 
-    if (clobResponse.data) {
+    if (marketResponse.data) {
       return {
-        source: 'clob',
-        data: clobResponse.data
+        source: 'clob-market',
+        data: marketResponse.data
       };
     }
   } catch (error) {
-    console.log(`CLOB API error for market ${marketId}: ${error.message}`);
+    console.log(`CLOB market API error for ${marketId}: ${error.message}`);
 
-    // Fallback to Strapi API
+    // Try simplified markets endpoint
     try {
-      const strapiResponse = await rateLimitedRequest(async () => {
-        return axios.get(`${config.polymarketStrapiUrl}/markets/${marketId}`, {
+      const simplifiedResponse = await rateLimitedRequest(async () => {
+        return axios.get(`${config.polymarketApiUrl}/simplified-markets`, {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
@@ -98,14 +98,45 @@ async function fetchMarketInfo(marketId) {
         });
       });
 
-      if (strapiResponse.data) {
-        return {
-          source: 'strapi',
-          data: strapiResponse.data
-        };
+      if (simplifiedResponse.data) {
+        // Find the specific market in the list
+        const markets = Array.isArray(simplifiedResponse.data) ? simplifiedResponse.data : [];
+        const market = markets.find(m => m.condition_id === marketId);
+
+        if (market) {
+          return {
+            source: 'simplified',
+            data: market
+          };
+        }
       }
-    } catch (strapiError) {
-      console.error(`Strapi API error for market ${marketId}: ${strapiError.message}`);
+    } catch (simplifiedError) {
+      console.error(`Simplified markets API error: ${simplifiedError.message}`);
+    }
+
+    // Try sampling markets endpoint as last resort
+    try {
+      const samplingResponse = await rateLimitedRequest(async () => {
+        return axios.get(`${config.polymarketApiUrl}/sampling-markets`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+      });
+
+      if (samplingResponse.data && samplingResponse.data.markets) {
+        const market = samplingResponse.data.markets.find(m => m.condition_id === marketId);
+
+        if (market) {
+          return {
+            source: 'sampling',
+            data: market
+          };
+        }
+      }
+    } catch (samplingError) {
+      console.error(`Sampling markets API error: ${samplingError.message}`);
     }
   }
 
@@ -114,23 +145,45 @@ async function fetchMarketInfo(marketId) {
 
 // Map Polymarket outcome to contract outcome format
 function mapOutcome(marketData, source) {
-  if (source === 'clob') {
-    // CLOB API format
-    if (marketData.resolved && marketData.winner) {
-      // Convert winner (YES/NO) to numeric outcome
-      return marketData.winner === 'YES' ? 1 : 0;
+  // Check if market is resolved
+  const isResolved = marketData.resolved || marketData.closed || marketData.is_resolved;
+
+  if (!isResolved) {
+    return null;
+  }
+
+  // Check various outcome fields used by different API endpoints
+  if (marketData.winning_outcome !== undefined) {
+    // Some endpoints use winning_outcome (YES/NO)
+    return marketData.winning_outcome === 'YES' || marketData.winning_outcome === 'Yes' ? 1 : 0;
+  }
+
+  if (marketData.winner !== undefined) {
+    // Others use winner
+    return marketData.winner === 'YES' || marketData.winner === 'Yes' ? 1 : 0;
+  }
+
+  if (marketData.outcome !== undefined) {
+    // Some use outcome
+    if (typeof marketData.outcome === 'string') {
+      return marketData.outcome === 'YES' || marketData.outcome === 'Yes' ? 1 : 0;
+    } else if (typeof marketData.outcome === 'number') {
+      return marketData.outcome;
     }
-  } else if (source === 'strapi') {
-    // Strapi API format
-    if (marketData.resolved) {
-      // Check various outcome fields
-      if (marketData.outcome !== undefined) {
-        return marketData.outcome === 'Yes' || marketData.outcome === 'YES' ? 1 : 0;
-      }
-      if (marketData.resolution !== undefined) {
-        return marketData.resolution === 'Yes' || marketData.resolution === 'YES' ? 1 : 0;
-      }
-    }
+  }
+
+  if (marketData.resolution !== undefined) {
+    // Others use resolution
+    return marketData.resolution === 'YES' || marketData.resolution === 'Yes' ? 1 : 0;
+  }
+
+  // For markets with tokens array (binary markets)
+  if (marketData.tokens && Array.isArray(marketData.tokens)) {
+    const yesToken = marketData.tokens.find(t => t.outcome === 'Yes' || t.outcome === 'YES');
+    const noToken = marketData.tokens.find(t => t.outcome === 'No' || t.outcome === 'NO');
+
+    if (yesToken && yesToken.winning) return 1;
+    if (noToken && noToken.winning) return 0;
   }
 
   return null;
