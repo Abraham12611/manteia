@@ -1,14 +1,38 @@
 const { fetchMarketInfo, mapOutcome } = require('./resolution-bot');
 const config = require('./config');
+const axios = require('axios');
 
 async function testMarketFetch() {
   console.log('Testing Manteia Resolution Bot Market Fetching...\n');
 
-  // Test with a known Polymarket market ID
-  const testMarketIds = [
-    '0x5f65177b394277fd294cd75650044e32ba009a95022022b4b5f60c9750f7a21c', // Example market
-    // Add more test market IDs here
-  ];
+  // Test with market IDs from config or use example
+  let testMarketIds = config.marketsToTrack.length > 0 ? config.marketsToTrack : [];
+
+  if (testMarketIds.length === 0) {
+    console.log('No markets configured in config.js');
+    console.log('Run "npm run markets:find" to discover current Polymarket markets');
+    console.log('Then add the condition IDs to scripts/config.js\n');
+
+    // Try to fetch some markets for testing
+    console.log('Attempting to fetch current markets for testing...\n');
+    try {
+      const response = await axios.get('https://clob.polymarket.com/simplified-markets', {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        // Take first 3 markets for testing
+        testMarketIds = response.data.slice(0, 3).map(m => m.condition_id).filter(Boolean);
+        console.log(`Found ${testMarketIds.length} markets to test\n`);
+      }
+    } catch (error) {
+      console.log('Could not fetch markets automatically:', error.message);
+      return;
+    }
+  }
 
   for (const marketId of testMarketIds) {
     console.log(`\nTesting market: ${marketId}`);
