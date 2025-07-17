@@ -1,70 +1,156 @@
-# Getting Started with Create React App
+# Manteia Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A cross-chain prediction market frontend built with React, integrating Polymarket's order book API with on-chain settlement on Mantle.
+
+## Features
+
+- **🌐 Cross-Chain Support**: Trade on multiple chains without manual bridging
+- **💱 Unified Order Book**: Access liquidity from all supported chains
+- **🚀 Lightning Fast**: Powered by Mantle's high-performance L2
+- **🔗 Wallet Integration**: Connect with MetaMask, WalletConnect, and more via Reown AppKit
+- **📊 Real-Time Markets**: Live market data with beautiful visualizations
+- **📱 Responsive Design**: Works seamlessly on desktop and mobile
+
+## Tech Stack
+
+- **React 19**: Latest React with modern hooks
+- **React Router**: Client-side routing
+- **Reown AppKit**: Wallet connectivity (formerly WalletConnect)
+- **Wagmi**: React hooks for Ethereum
+- **Viem**: TypeScript Ethereum library
+- **Ethers.js**: Ethereum library for contract interactions
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 16+ and npm
+- A Reown project ID from https://cloud.reown.com/
+
+### Installation
+
+1. Clone the repository and navigate to the frontend:
+```bash
+cd manteia/frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+   - Create a `.env` file in the frontend directory
+   - See `ENV_SETUP.md` for detailed instructions
+   - Add your Reown project ID and contract addresses
+
+4. Start the development server:
+```bash
+npm start
+```
+
+The app will open at http://localhost:3000
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── components/       # Reusable UI components
+│   │   ├── Header.js    # Navigation header with wallet connection
+│   │   └── MarketCard.js # Market display cards
+│   ├── context/         # React context providers
+│   │   └── Web3Context.js # Wallet connectivity context
+│   ├── pages/           # Page components
+│   │   ├── Home.js      # Landing page
+│   │   └── Markets.js   # Markets grid page
+│   ├── abi/             # Contract ABIs
+│   ├── theme.css        # Design system variables
+│   ├── config.js        # Configuration file
+│   ├── App.js           # Main app component
+│   └── index.js         # Entry point
+├── public/              # Static assets
+└── package.json         # Dependencies
+```
+
+## Design System
+
+The app uses a custom design system with:
+
+- **Color Palette**: Deep Mantle Blue primary with Electric Cyan accents
+- **Typography**: Inter for UI, JetBrains Mono for numbers, Outfit for headings
+- **Spacing**: Consistent spacing scale from 4px to 64px
+- **Components**: Reusable, accessible components following best practices
 
 ## Available Scripts
 
-In the project directory, you can run:
+- `npm start` - Run development server
+- `npm build` - Build for production
+- `npm test` - Run tests
+- `npm eject` - Eject from Create React App (not recommended)
 
-### `npm start`
+## Key Components
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Header
+- Logo with gradient effect
+- Search functionality (to be implemented)
+- Category navigation
+- Chain selector for connected wallet
+- Connect wallet button with Reown modal
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### MarketCard
+- Displays market question and probability
+- Shows supported chains
+- Volume and time period indicators
+- Buy Yes/No quick action buttons
+- Bookmark and share functionality
 
-### `npm test`
+### Markets Page
+- Filter bar with category pills
+- Responsive grid layout
+- Loading states with shimmer effect
+- Empty states for no results
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Home Page
+- Hero section with CTA
+- Feature highlights
+- Featured markets showcase
+- Interactive chain visualization
 
-### `npm run build`
+## Environment Variables
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Required environment variables:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `REACT_APP_REOWN_PROJECT_ID` - Your Reown project ID
+- `REACT_APP_MARKET_HUB_ADDRESS` - Deployed MarketHub contract address
+- `REACT_APP_POLYMARKET_API_URL` - Polymarket API endpoint
+- `REACT_APP_MANTLE_RPC_URL` - Mantle testnet RPC URL
+- `REACT_APP_MANTLE_CHAIN_ID` - Mantle chain ID
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+See `ENV_SETUP.md` for detailed setup instructions.
 
-### `npm run eject`
+## Supported Networks
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- **Mantle Testnet** (Chain ID: 5001)
+- **Mantle Sepolia** (Chain ID: 5003)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Additional networks can be added in `src/context/Web3Context.js`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Contributing
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Learn More
+## License
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+This project is part of the Manteia protocol.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Acknowledgments
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Built for the Mantle ecosystem
+- Integrates with Polymarket's CLOB API
+- Uses Hyperlane for cross-chain messaging
+- Wallet connectivity powered by Reown (WalletConnect)
