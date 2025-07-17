@@ -1,0 +1,336 @@
+/* Market Card Styles */
+.market-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  padding: var(--space-5);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.market-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-glow-lg);
+  border-color: rgba(0, 212, 255, 0.3);
+}
+
+/* Featured Card Variation */
+.market-card.featured {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(0, 212, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  margin-bottom: var(--space-4);
+}
+
+/* Category Badge */
+.category-badge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Chain Indicators */
+.chain-indicators {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: var(--space-2);
+}
+
+.chain-icon-wrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: white;
+  border: 2px solid var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -8px;
+  transition: all var(--transition-fast);
+}
+
+.chain-icon-wrapper:first-child {
+  margin-left: 0;
+}
+
+.market-card:hover .chain-icon-wrapper {
+  transform: translateX(2px);
+}
+
+.chain-icon-img {
+  width: 12px;
+  height: 12px;
+}
+
+/* Bookmark Button */
+.bookmark-btn {
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.bookmark-btn:hover,
+.bookmark-btn.active {
+  color: var(--color-secondary);
+  transform: scale(1.1);
+}
+
+.bookmark-btn.active {
+  animation: pulse 0.3s ease-out;
+}
+
+/* Card Title */
+.card-title {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  height: 84px;
+  margin-bottom: var(--space-4);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  flex-shrink: 0;
+}
+
+/* Probability Display */
+.probability-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 88px;
+  margin-bottom: var(--space-4);
+  flex-shrink: 0;
+}
+
+.probability-ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+
+.probability-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.probability-bg {
+  fill: none;
+  stroke: var(--color-neutral-700);
+}
+
+.probability-fill {
+  fill: none;
+  transition: stroke-dashoffset 0.8s ease-out;
+}
+
+.probability-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.probability-value {
+  display: block;
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  color: var(--color-text-primary);
+}
+
+.probability-label {
+  display: block;
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  color: var(--color-text-secondary);
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-shrink: 0;
+}
+
+.buy-yes-btn,
+.buy-no-btn {
+  flex: 1;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  transition: all var(--transition-fast);
+}
+
+.buy-yes-btn {
+  background: var(--gradient-success);
+}
+
+.buy-no-btn {
+  background: var(--gradient-danger);
+}
+
+.buy-yes-btn:hover,
+.buy-no-btn:hover {
+  transform: scale(1.02);
+  filter: brightness(1.2);
+}
+
+.buy-yes-btn:hover {
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.buy-no-btn:hover {
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.buy-yes-btn svg,
+.buy-no-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.volume-display {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.volume-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-base);
+}
+
+.market-card:hover .volume-icon {
+  transform: rotate(180deg);
+}
+
+.time-period {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.action-icons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover {
+  color: var(--color-secondary);
+  transform: scale(1.1);
+}
+
+/* Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .market-card {
+    min-height: 360px;
+    padding: var(--space-4);
+  }
+
+  .card-title {
+    font-size: var(--text-sm);
+    height: 72px;
+  }
+
+  .probability-container {
+    height: 76px;
+  }
+
+  .probability-ring {
+    width: 60px;
+    height: 60px;
+  }
+
+  .probability-value {
+    font-size: var(--text-lg);
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .buy-yes-btn,
+  .buy-no-btn {
+    width: 100%;
+    height: 36px;
+  }
+}
