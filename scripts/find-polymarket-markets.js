@@ -16,18 +16,9 @@ async function findActiveMarkets(options = {}) {
   console.log('Searching for Polymarket markets...\n');
 
   try {
-    // Try Gamma API first (newer API)
-    let url = `${GAMMA_API_URL}/markets`;
-    const params = new URLSearchParams();
-
-    if (active) params.append('active', 'true');
-    if (closed) params.append('closed', 'true');
-    if (limit) params.append('limit', limit.toString());
-    if (tag) params.append('tag', tag);
-    if (searchTerm) params.append('search', searchTerm);
-
-    const queryString = params.toString();
-    if (queryString) url += `?${queryString}`;
+    // Try CLOB API first (current API)
+    const CLOB_API_URL = 'https://clob.polymarket.com';
+    let url = `${CLOB_API_URL}/markets`;
 
     console.log(`Fetching from: ${url}`);
 
@@ -38,58 +29,104 @@ async function findActiveMarkets(options = {}) {
       }
     });
 
-    if (response.data && Array.isArray(response.data)) {
-      console.log(`Found ${response.data.length} markets\n`);
+    if (response.data) {
+      const markets = response.data.data || response.data;
+      const marketArray = Array.isArray(markets) ? markets : [];
 
-      response.data.forEach((market, index) => {
-        console.log(`${index + 1}. ${market.title || market.question}`);
-        console.log(`   ID: ${market.id || market.conditionId}`);
+      console.log(`Found ${marketArray.length} markets\n`);
+
+      // Filter and sort markets
+      let filteredMarkets = marketArray;
+
+      // Apply filters
+      if (active && !closed) {
+        filteredMarkets = marketArray.filter(m => !m.closed && m.active !== false);
+      } else if (closed && !active) {
+        filteredMarkets = marketArray.filter(m => m.closed || m.active === false);
+      }
+
+      // Apply tag filter
+      if (tag && filteredMarkets.length > 0) {
+        filteredMarkets = filteredMarkets.filter(m =>
+          m.tags && m.tags.some(t => t.toLowerCase().includes(tag.toLowerCase()))
+        );
+      }
+
+      // Apply search filter
+      if (searchTerm && filteredMarkets.length > 0) {
+        filteredMarkets = filteredMarkets.filter(m =>
+          (m.question && m.question.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (m.title && m.title.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+      }
+
+      // Sort by volume descending
+      filteredMarkets.sort((a, b) => (parseFloat(b.volume) || 0) - (parseFloat(a.volume) || 0));
+
+      // Limit results
+      const displayMarkets = filteredMarkets.slice(0, limit);
+
+      displayMarkets.forEach((market, index) => {
+        console.log(`${index + 1}. ${market.question || market.title}`);
+        console.log(`   Condition ID: ${market.condition_id || market.conditionId}`);
         console.log(`   Status: ${market.closed ? 'CLOSED' : 'ACTIVE'}`);
-        console.log(`   Volume: $${market.volume || 0}`);
-        console.log(`   Created: ${new Date(market.createdAt).toLocaleDateString()}`);
-        if (market.endDate) {
-          console.log(`   Ends: ${new Date(market.endDate).toLocaleDateString()}`);
+        console.log(`   Volume: $${parseFloat(market.volume || 0).toLocaleString()}`);
+        if (market.liquidity) {
+          console.log(`   Liquidity: $${parseFloat(market.liquidity).toLocaleString()}`);
+        }
+        if (market.created_at) {
+          console.log(`   Created: ${new Date(market.created_at).toLocaleDateString()}`);
+        }
+        if (market.end_date_iso || market.endDate) {
+          console.log(`   Ends: ${new Date(market.end_date_iso || market.endDate).toLocaleDateString()}`);
         }
         console.log('');
       });
 
-      // Return market IDs for easy copying
-      const marketIds = response.data.map(m => m.id || m.conditionId).filter(Boolean);
-      console.log('\nMarket IDs (for config.js):');
-      console.log(JSON.stringify(marketIds, null, 2));
+      // Return condition IDs for easy copying
+      const conditionIds = displayMarkets.map(m => m.condition_id || m.conditionId).filter(Boolean);
+      console.log('\nCondition IDs (for config.js):');
+      console.log(JSON.stringify(conditionIds, null, 2));
 
-      return response.data;
+      return displayMarkets;
     }
   } catch (error) {
-    console.error('Error fetching from Gamma API:', error.message);
+    console.error('Error fetching markets:', error.message);
 
-    // Fallback to Strapi API
+    if (error.response && error.response.status === 404) {
+      console.log('\nNote: The CLOB API might require authentication or the endpoint has changed.');
+      console.log('Try using the Gamma API directly or check Polymarket documentation for updates.');
+    }
+
+    // Try simplified endpoint
     try {
-      console.log('\nTrying Strapi API...');
-      const strapiUrl = `${STRAPI_API_URL}/markets?_limit=${limit}&_sort=volume:DESC`;
+      console.log('\nTrying simplified markets endpoint...');
+      const simplifiedUrl = 'https://clob.polymarket.com/simplified-markets';
 
-      const strapiResponse = await axios.get(strapiUrl, {
+      const simplifiedResponse = await axios.get(simplifiedUrl, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         }
       });
 
-      if (strapiResponse.data && Array.isArray(strapiResponse.data)) {
-        console.log(`Found ${strapiResponse.data.length} markets from Strapi\n`);
+      if (simplifiedResponse.data) {
+        const markets = Array.isArray(simplifiedResponse.data) ? simplifiedResponse.data : [];
+        console.log(`Found ${markets.length} simplified markets\n`);
 
-        strapiResponse.data.forEach((market, index) => {
-          console.log(`${index + 1}. ${market.question}`);
-          console.log(`   ID: ${market.id || market.slug}`);
-          console.log(`   Status: ${market.resolved ? 'RESOLVED' : 'ACTIVE'}`);
-          console.log(`   Created: ${new Date(market.created_at).toLocaleDateString()}`);
+        const displayMarkets = markets.slice(0, limit);
+        displayMarkets.forEach((market, index) => {
+          console.log(`${index + 1}. ${market.question || market.title}`);
+          console.log(`   Condition ID: ${market.condition_id}`);
+          console.log(`   Status: ${market.closed ? 'CLOSED' : 'ACTIVE'}`);
+          if (market.volume) console.log(`   Volume: $${parseFloat(market.volume).toLocaleString()}`);
           console.log('');
         });
 
-        return strapiResponse.data;
+        return displayMarkets;
       }
-    } catch (strapiError) {
-      console.error('Error fetching from Strapi API:', strapiError.message);
+    } catch (simplifiedError) {
+      console.error('Error fetching simplified markets:', simplifiedError.message);
     }
   }
 
