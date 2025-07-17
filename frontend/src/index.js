@@ -2,12 +2,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
+import Web3ContextProvider from './context/Web3Context';
 import reportWebVitals from './reportWebVitals';
+
+// Get cookies for SSR support (in Next.js this would come from headers)
+const cookies = typeof document !== 'undefined' ? document.cookie : null;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <App />
+    <Web3ContextProvider cookies={cookies}>
+      <App />
+    </Web3ContextProvider>
   </React.StrictMode>
 );
 
