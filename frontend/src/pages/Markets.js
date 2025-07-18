@@ -2,139 +2,150 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FiFilter } from 'react-icons/fi';
 import MarketCard from '../components/MarketCard';
+import backendService from '../services/backendService';
 import './Markets.css';
-
-// Mock data - replace with API calls
-const mockMarkets = [
-  {
-    id: '1',
-    question: 'Will GPT-5 be released before the end of 2025?',
-    category: 'Tech',
-    probability: 73,
-    volume: 5234000,
-    timePeriod: 'Monthly',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' },
-      { id: 'base', name: 'Base' },
-      { id: 'ethereum', name: 'Ethereum' }
-    ]
-  },
-  {
-    id: '2',
-    question: 'Will the Lakers win the NBA Championship in 2025?',
-    category: 'Sports',
-    probability: 28,
-    volume: 1250000,
-    timePeriod: 'Annual',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' },
-      { id: 'polygon', name: 'Polygon' }
-    ]
-  },
-  {
-    id: '3',
-    question: 'Will Bitcoin reach $100,000 by March 2025?',
-    category: 'Crypto',
-    probability: 61,
-    volume: 8750000,
-    timePeriod: 'Daily',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' },
-      { id: 'arbitrum', name: 'Arbitrum' },
-      { id: 'optimism', name: 'Optimism' }
-    ]
-  },
-  {
-    id: '4',
-    question: 'Will there be a major AI breakthrough announced at the next tech conference?',
-    category: 'Tech',
-    probability: 42,
-    volume: 890000,
-    timePeriod: 'Weekly',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' }
-    ]
-  },
-  {
-    id: '5',
-    question: 'Will the Federal Reserve cut interest rates in Q1 2025?',
-    category: 'Economy',
-    probability: 55,
-    volume: 3200000,
-    timePeriod: 'Quarterly',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' },
-      { id: 'ethereum', name: 'Ethereum' }
-    ]
-  },
-  {
-    id: '6',
-    question: 'Will SpaceX successfully land humans on Mars by 2030?',
-    category: 'Tech',
-    probability: 35,
-    volume: 2100000,
-    timePeriod: 'Annual',
-    supportedChains: [
-      { id: 'mantle', name: 'Mantle' },
-      { id: 'base', name: 'Base' }
-    ],
-    featured: true
-  }
-];
 
 const filterOptions = [
   'All',
   'Breaking News',
-  'Trump Presidency',
-  'Jerome Powell',
-  'Syria',
-  'Epstein',
-  'Israel',
-  'AI',
-  'Trade War',
-  'NYC Mayor',
-  'Geopolitics'
+  'Politics',
+  'Sports',
+  'Crypto',
+  'Tech',
+  'Culture',
+  'World',
+  'Economy',
+  'Elections'
 ];
 
 const Markets = () => {
   const [searchParams] = useSearchParams();
   const [markets, setMarkets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const category = searchParams.get('category');
 
   useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => {
-      let filteredMarkets = [...mockMarkets];
-
-      // Filter by category if provided
-      if (category) {
-        filteredMarkets = filteredMarkets.filter(
-          market => market.category.toLowerCase() === category.toLowerCase()
-        );
-      }
-
-      setMarkets(filteredMarkets);
-      setLoading(false);
-    }, 800);
+    loadMarkets();
   }, [category, activeFilter]);
 
-  const handleBookmark = (marketId, isBookmarked) => {
+  const loadMarkets = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const filters = {};
+
+      // Add category filter
+      if (category && category !== 'all') {
+        filters.category = category;
+      }
+
+      // Add active filter
+      if (activeFilter !== 'All') {
+        filters.category = activeFilter.toLowerCase();
+      }
+
+      // Add pagination
+      filters.limit = 20;
+      filters.offset = 0;
+
+      const response = await backendService.getMarkets(filters);
+
+      if (response.success) {
+        setMarkets(response.data.markets || []);
+      } else {
+        setError(response.error || 'Failed to load markets');
+        setMarkets([]);
+      }
+    } catch (err) {
+      console.error('Error loading markets:', err);
+      setError('Failed to load markets. Please try again.');
+      setMarkets([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBookmark = async (marketId, isBookmarked) => {
     console.log(`Market ${marketId} bookmarked: ${isBookmarked}`);
-    // Implement bookmark functionality
+    // TODO: Implement bookmark functionality with backend
   };
 
   const handleShare = (market) => {
-    console.log(`Sharing market: ${market.question}`);
-    // Implement share functionality
+    console.log(`Sharing market: ${market.title}`);
+
+    // Create share URL
+    const shareUrl = `${window.location.origin}/market/${market.id}`;
+
+    // Use native sharing if available
+    if (navigator.share) {
+      navigator.share({
+        title: market.title,
+        text: market.description,
+        url: shareUrl
+      }).catch(err => {
+        console.error('Error sharing:', err);
+        fallbackShare(shareUrl);
+      });
+    } else {
+      fallbackShare(shareUrl);
+    }
+  };
+
+  const fallbackShare = (url) => {
+    // Copy to clipboard as fallback
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Market URL copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy URL:', err);
+    });
   };
 
   const handleFilterChange = (filter) => {
     setActiveFilter(filter);
+  };
+
+  const formatMarketForCard = (market) => {
+    return {
+      id: market.id,
+      question: market.title,
+      category: market.category,
+      probability: Math.round((market.currentPrice || 0.5) * 100),
+      volume: market.totalVolume || 0,
+      timePeriod: getTimePeriod(market.endDate),
+      supportedChains: [
+        { id: 'mantle', name: 'Mantle' }
+      ],
+      isBookmarked: false, // TODO: Get from user preferences
+      featured: market.featured || false
+    };
+  };
+
+  const getTimePeriod = (endDate) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    const diffTime = end - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return 'Ended';
+    } else if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Tomorrow';
+    } else if (diffDays <= 7) {
+      return `${diffDays} days`;
+    } else if (diffDays <= 30) {
+      return `${Math.ceil(diffDays / 7)} weeks`;
+    } else if (diffDays <= 365) {
+      return `${Math.ceil(diffDays / 30)} months`;
+    } else {
+      return `${Math.ceil(diffDays / 365)} years`;
+    }
   };
 
   return (
@@ -153,7 +164,10 @@ const Markets = () => {
               </button>
             ))}
           </div>
-          <button className="filter-menu-btn" onClick={() => setShowFilterMenu(!showFilterMenu)}>
+          <button
+            className="filter-menu-btn"
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+          >
             <FiFilter />
           </button>
         </div>
@@ -167,17 +181,25 @@ const Markets = () => {
               <div key={index} className="market-card-skeleton shimmer" />
             ))}
           </div>
+        ) : error ? (
+          <div className="error-state">
+            <h3>Error Loading Markets</h3>
+            <p>{error}</p>
+            <button onClick={loadMarkets} className="retry-btn">
+              Try Again
+            </button>
+          </div>
         ) : markets.length === 0 ? (
           <div className="empty-state">
             <h3>No markets found</h3>
-            <p>Try adjusting your filters or search terms</p>
+            <p>Try adjusting your filters or check back later for new markets</p>
           </div>
         ) : (
           <div className="markets-grid">
             {markets.map((market) => (
               <MarketCard
                 key={market.id}
-                market={market}
+                market={formatMarketForCard(market)}
                 featured={market.featured}
                 onBookmark={handleBookmark}
                 onShare={handleShare}
@@ -190,7 +212,7 @@ const Markets = () => {
       {/* Load More */}
       {!loading && markets.length > 0 && (
         <div className="load-more-container">
-          <button className="load-more-btn">
+          <button className="load-more-btn" onClick={loadMarkets}>
             Load More Markets
           </button>
         </div>

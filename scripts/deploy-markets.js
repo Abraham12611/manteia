@@ -11,7 +11,7 @@ async function main() {
 
   // Deploy MarketHub on Mantle Sepolia
   const MarketHub = await hre.ethers.getContractFactory("MarketHub");
-  const marketHub = await MarketHub.deploy(mockMailbox.target);
+  const marketHub = await MarketHub.deploy(); // Remove parameter as constructor doesn't take any
   await marketHub.waitForDeployment();
   console.log("MarketHub deployed to:", marketHub.target, "on Mantle Sepolia");
 

@@ -108,29 +108,29 @@ const MarketCard = ({
       {/* Probability Display */}
       <div className="probability-container">
         <div className="probability-ring">
-          <svg className="probability-svg" viewBox="0 0 80 80">
+          <svg className="probability-svg" viewBox="0 0 96 96">
             <defs>
               <linearGradient id={`probability-gradient-${market.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style={{ stopColor: '#00d4ff', stopOpacity: 1 }} />
-                <stop offset="100%" style={{ stopColor: '#3b82f6', stopOpacity: 1 }} />
+                <stop offset="0%" stopColor="var(--color-primary)" />
+                <stop offset="100%" stopColor="var(--color-secondary)" />
               </linearGradient>
             </defs>
             <circle
               className="probability-bg"
-              cx="40"
-              cy="40"
-              r="36"
+              cx="48"
+              cy="48"
+              r="44"
               strokeWidth="4"
             />
             <circle
               className="probability-fill"
-              cx="40"
-              cy="40"
-              r="36"
+              cx="48"
+              cy="48"
+              r="44"
               strokeWidth="4"
               stroke={`url(#probability-gradient-${market.id})`}
-              strokeDasharray={`${2 * Math.PI * 36}`}
-              strokeDashoffset={`${2 * Math.PI * 36 * (1 - market.probability / 100)}`}
+              strokeDasharray={`${2 * Math.PI * 44}`}
+              strokeDashoffset={`${2 * Math.PI * 44 * (1 - market.probability / 100)}`}
             />
           </svg>
           <div className="probability-text">

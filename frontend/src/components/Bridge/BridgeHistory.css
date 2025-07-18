@@ -1,0 +1,331 @@
+/* Bridge History Component Styles */
+.bridge-history {
+  padding: 20px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+.bridge-history h3 {
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bridge-history h3::before {
+  content: "📋";
+  font-size: 1.2rem;
+}
+
+.bridge-history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.bridge-history-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bridge-history-filter label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.bridge-history-filter select,
+.bridge-history-filter input {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  min-width: 120px;
+}
+
+.bridge-history-filter select:focus,
+.bridge-history-filter input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.bridge-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bridge-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.bridge-history-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+.bridge-history-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bridge-history-item-route {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.bridge-history-item-amount {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.bridge-history-item-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bridge-history-item-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bridge-status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bridge-status-badge.pending {
+  background: rgba(251, 191, 36, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.bridge-status-badge.completed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.bridge-status-badge.failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.bridge-status-badge.processing {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.bridge-history-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.bridge-history-action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--button-bg);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bridge-history-action-btn:hover {
+  background: var(--button-hover);
+  border-color: var(--primary-color);
+}
+
+.bridge-history-action-btn.primary {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.bridge-history-action-btn.primary:hover {
+  background: var(--primary-hover);
+}
+
+.bridge-history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.bridge-history-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.bridge-history-empty-text {
+  font-size: 1.125rem;
+  margin-bottom: 8px;
+}
+
+.bridge-history-empty-subtext {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.bridge-history-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.bridge-history-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.bridge-history-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 15px;
+}
+
+.bridge-history-pagination-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--button-bg);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bridge-history-pagination-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  border-color: var(--primary-color);
+}
+
+.bridge-history-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bridge-history-pagination-btn.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.bridge-history-pagination-info {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0 20px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .bridge-history {
+    padding: 15px;
+  }
+
+  .bridge-history-filters {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .bridge-history-filter {
+    width: 100%;
+  }
+
+  .bridge-history-filter select,
+  .bridge-history-filter input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .bridge-history-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .bridge-history-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .bridge-history-pagination {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .bridge-history-pagination-info {
+    width: 100%;
+    text-align: center;
+    margin: 10px 0;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .bridge-history {
+    background: var(--card-bg, #1f2937);
+    border-color: var(--border-color, #374151);
+  }
+
+  .bridge-history-filters {
+    background: var(--bg-secondary, #111827);
+    border-color: var(--border-color, #374151);
+  }
+
+  .bridge-history-item {
+    background: var(--bg-secondary, #111827);
+    border-color: var(--border-color, #374151);
+  }
+}
