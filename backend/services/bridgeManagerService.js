@@ -1,8 +1,10 @@
+const { EventEmitter } = require('events');
 const logger = require('../utils/logger');
 const BridgeProviderInterface = require('../interfaces/bridgeProviderInterface');
 
-class BridgeManagerService {
+class BridgeManagerService extends EventEmitter {
   constructor() {
+    super();
     this.providers = new Map();
     this.defaultProvider = null;
     this.initialized = false;
