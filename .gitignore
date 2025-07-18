@@ -1,41 +1,54 @@
-# Dependencies
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
 node_modules/
+*/node_modules/
+/.pnp
+.pnp.js
 
-# Environment variables
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
 .env
-config.js
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Hardhat
-artifacts/
-cache/
-coverage/
-coverage.json
-typechain/
-typechain-types/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Logs
-logs/
-*.log
-
-# Build outputs
-dist/
-build/
-
-# IDE and editor files
-.idea/
+# IDEs
 .vscode/
+.idea/
 *.swp
 *.swo
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-.cursor/
-Thumbs.db
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Cache
+.cache/
+
+# Documentation and setup files (exclude from repo)
+backend/env-config.txt
+backend/setup-env.js
+frontend/CREATE_ENV_FILE.md
+frontend/ENV_SETUP.md
+frontend/REOWN_IMPLEMENTATION_FIXES.md
 
 # Other
 .cursor/
@@ -46,10 +59,36 @@ CHANGELOG.md
 manteia-build-protocol.mdc
 RESOLUTION_BOT_QUICKSTART.md
 RESOLUTION_BOT_FIXES.md
+CHANGELOG.md
+refernece-readme.md
+RESOLUTION_BOT_FIXES.md
+RESOLUTION_BOT_QUICKSTART.md
+
+# Auto-commit script (exclude from repo)
+auto-commit.sh
+
+# Build outputs
+/dist/
+/build/
+
+# Hardhat files
+cache/
+artifacts/
+typechain/
+typechain-types/
+
+# Coverage
+coverage.json
+coverage/
+
+# Foundry
+out/
+cache_forge/
+backend/services/receiptService.js
+frontend/src/config.js
+backend/API_DOCUMENTATION.md
+scripts/config.js
 frontend/CREATE_ENV_FILE.md
 frontend/ENV_SETUP.md
 frontend/REOWN_IMPLEMENTATION_FIXES.md
 scripts/config.example.js
-backend/services/receiptService.js
-.gitignore
-backend/API_DOCUMENTATION.md
