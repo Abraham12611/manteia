@@ -11,7 +11,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   networks: {
     mantle_sepolia: {
       url: "https://rpc.sepolia.mantle.xyz",
