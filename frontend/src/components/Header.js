@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FiSearch, FiChevronDown } from 'react-icons/fi';
 import { useAppKitAccount, useAppKitNetwork } from '@reown/appkit/react';
+import ProfileDropdown from './Header/ProfileDropdown';
 import './Header.css';
 
 const navigationItems = [
+  { label: 'Markets', path: '/markets' },
+  { label: 'Bridge', path: '/bridge' },
   { label: 'Trending', path: '/trending' },
   { label: 'New', path: '/new' },
   { label: 'Politics', path: '/politics' },
@@ -120,13 +123,16 @@ const Header = () => {
           </div>
         </form>
 
-        {/* Wallet Connection - Using AppKit components as per documentation */}
+        {/* Wallet Connection & Profile */}
         <div className="wallet-section">
           {isConnected ? (
             <div className="wallet-info">
-              <span className="wallet-address">{formatAddress(address)}</span>
-              <span className="wallet-network">{formatNetworkName(caipNetwork)}</span>
+              <div className="wallet-details">
+                <span className="wallet-address">{formatAddress(address)}</span>
+                <span className="wallet-network">{formatNetworkName(caipNetwork)}</span>
+              </div>
               <w3m-network-button />
+              <ProfileDropdown />
             </div>
           ) : (
             <w3m-button />
