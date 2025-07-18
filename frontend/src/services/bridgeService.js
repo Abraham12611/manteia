@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const bridgeApi = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001/api/bridge',
+  baseURL: `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/api/bridge`,
   timeout: 15000, // Bridges can take longer
   headers: {
     'Content-Type': 'application/json',
