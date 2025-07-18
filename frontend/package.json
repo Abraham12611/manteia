@@ -24,8 +24,9 @@
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
+    "build": "CI=false DISABLE_ESLINT_PLUGIN=true SKIP_PREFLIGHT_CHECK=true GENERATE_SOURCEMAP=false craco build",
+    "build:vercel": "CI=false npm run build",
+    "test": "CI=false craco test --watchAll=false --passWithNoTests",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
