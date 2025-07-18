@@ -127,15 +127,15 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 88px;
+  height: 110px;
   margin-bottom: var(--space-4);
   flex-shrink: 0;
 }
 
 .probability-ring {
   position: relative;
-  width: 72px;
-  height: 72px;
+  width: 96px;
+  height: 96px;
 }
 
 .probability-svg {
@@ -164,16 +164,18 @@
 
 .probability-value {
   display: block;
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: var(--font-bold);
   color: var(--color-text-primary);
+  line-height: 1.2;
 }
 
 .probability-label {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--font-medium);
   color: var(--color-text-secondary);
+  margin-top: 2px;
 }
 
 /* Action Buttons */
