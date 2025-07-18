@@ -1,0 +1,479 @@
+/* ProfileActivity.css */
+.profile-activity {
+  padding: 0;
+}
+
+.activity-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.activity-loading .loading-spinner {
+  margin-bottom: 1rem;
+}
+
+.activity-loading p {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.activity-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.activity-error .error-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.activity-error p {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.activity-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.filter-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.filter-toggle:hover {
+  background: #f3f4f6;
+}
+
+.filter-icon {
+  font-size: 1rem;
+}
+
+.filter-arrow {
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.filter-arrow.open {
+  transform: rotate(180deg);
+}
+
+.min-amount-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.min-amount-filter label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.filter-select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+.expanded-filters {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.activity-content {
+  margin-bottom: 2rem;
+}
+
+.activity-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  text-align: center;
+}
+
+.activity-empty .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.activity-empty h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.activity-empty p {
+  color: #6b7280;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+.activity-list {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.activity-table-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.header-cell {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.activity-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s;
+}
+
+.activity-row:last-child {
+  border-bottom: none;
+}
+
+.activity-row:hover {
+  background: #f9fafb;
+}
+
+.activity-type {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.type-icon {
+  font-size: 1rem;
+}
+
+.type-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.activity-market {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.market-category {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-icon {
+  font-size: 0.9rem;
+}
+
+.category-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.market-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.market-price {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.activity-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: right;
+}
+
+.amount-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.amount-date {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.activity-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.tx-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
+}
+
+.tx-link:hover {
+  background: #eff6ff;
+  transform: scale(1.1);
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.activity-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.activity-summary {
+  display: flex;
+  justify-content: center;
+}
+
+.summary-text {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .activity-list {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .activity-table-header {
+    background: #111827;
+    border-color: #374151;
+  }
+
+  .activity-row {
+    border-color: #374151;
+  }
+
+  .activity-row:hover {
+    background: #374151;
+  }
+
+  .market-title {
+    color: #f9fafb;
+  }
+
+  .amount-value {
+    color: #f9fafb;
+  }
+
+  .filter-toggle {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .filter-toggle:hover {
+    background: #4b5563;
+  }
+
+  .filter-select {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .expanded-filters {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .activity-empty h3 {
+    color: #f9fafb;
+  }
+
+  .activity-footer {
+    border-color: #374151;
+  }
+
+  .tx-link:hover {
+    background: #1e3a8a;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .activity-list {
+    border-radius: 0.5rem;
+  }
+
+  .header-row,
+  .activity-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .activity-table-header {
+    display: none;
+  }
+
+  .activity-row {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .activity-type {
+    order: 1;
+  }
+
+  .activity-market {
+    order: 2;
+  }
+
+  .activity-amount {
+    order: 3;
+    text-align: left;
+  }
+
+  .activity-actions {
+    order: 4;
+    justify-content: flex-start;
+  }
+
+  .expanded-filters {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .filter-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .activity-row {
+    padding: 0.75rem;
+  }
+
+  .market-title {
+    font-size: 0.8rem;
+  }
+
+  .amount-value {
+    font-size: 0.8rem;
+  }
+
+  .type-text {
+    font-size: 0.8rem;
+  }
+}
