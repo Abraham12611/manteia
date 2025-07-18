@@ -50,3 +50,6 @@ frontend/CREATE_ENV_FILE.md
 frontend/ENV_SETUP.md
 frontend/REOWN_IMPLEMENTATION_FIXES.md
 scripts/config.example.js
+backend/services/receiptService.js
+.gitignore
+backend/API_DOCUMENTATION.md
