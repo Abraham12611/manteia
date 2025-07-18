@@ -23,7 +23,8 @@
     "compile": "hardhat compile",
     "postinstall": "cd backend && npm install && cd ../frontend && npm install",
     "deploy:vercel": "node scripts/deploy-vercel.js",
-    "deploy:check": "node scripts/deploy-vercel.js"
+    "deploy:check": "node scripts/deploy-vercel.js",
+    "generate:jwt": "node scripts/generate-jwt-secret.js"
   },
   "workspaces": [
     "backend",
