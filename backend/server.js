@@ -13,6 +13,8 @@ const databaseService = require('./config/database');
 const transactionMonitorService = require('./services/transactionMonitorService');
 const receiptService = require('./services/receiptService');
 const bridgeManagerService = require('./services/bridgeManagerService');
+const userProfileService = require('./services/userProfileService');
+const tradingService = require('./services/tradingService');
 
 // Import routes
 const transactionRoutes = require('./routes/transactions');
@@ -20,6 +22,9 @@ const receiptRoutes = require('./routes/receipts');
 const healthRoutes = require('./routes/health');
 const userRoutes = require('./routes/users');
 const bridgeRoutes = require('./routes/bridge');
+const profileRoutes = require('./routes/profile');
+const tradingRoutes = require('./routes/trading');
+const adminRoutes = require('./routes/admin');
 
 class ManteiaBackend {
   constructor() {
@@ -111,6 +116,9 @@ class ManteiaBackend {
     this.app.use('/api/receipts', receiptRoutes);
     this.app.use('/api/users', userRoutes);
     this.app.use('/api/bridge', bridgeRoutes);
+    this.app.use('/api/profile', profileRoutes);
+    this.app.use('/api/trading', tradingRoutes);
+    this.app.use('/api/admin', adminRoutes);
 
     // Root route
     this.app.get('/', (req, res) => {
@@ -161,6 +169,11 @@ class ManteiaBackend {
       logger.info('Initializing database connection...');
       await databaseService.initialize();
 
+      // Initialize trading service
+      logger.info('Initializing trading service...');
+      this.tradingService = tradingService;
+      await this.tradingService.init();
+
       // Initialize receipt service
       logger.info('Initializing receipt service...');
       await receiptService.initialize();
@@ -172,6 +185,10 @@ class ManteiaBackend {
       // Initialize bridge manager
       logger.info('Initializing bridge manager...');
       await bridgeManagerService.initialize();
+
+      // Initialize user profile service
+      logger.info('Initializing user profile service...');
+      await userProfileService.initialize();
 
       // Start transaction monitoring if enabled
       if (process.env.TRANSACTION_MONITOR_ENABLED === 'true') {
@@ -213,6 +230,12 @@ class ManteiaBackend {
         socket.join(`bridge_${bridgeId}`);
         logger.info(`Socket ${socket.id} subscribed to bridge ${bridgeId} updates`);
       });
+
+      // Handle profile updates subscription
+      socket.on('subscribe_profile_updates', (walletAddress) => {
+        socket.join(`profile_${walletAddress}`);
+        logger.info(`Socket ${socket.id} subscribed to profile ${walletAddress} updates`);
+      });
     });
 
     // Set up real-time event handlers
@@ -236,6 +259,11 @@ class ManteiaBackend {
       if (data.userId) {
         this.io.to(`user_${data.userId}`).emit('bridge_update', data);
       }
+    });
+
+    // Profile updates
+    userProfileService.on('profileUpdate', (data) => {
+      this.io.to(`profile_${data.walletAddress}`).emit('profile_update', data);
     });
 
     // System status updates
@@ -301,6 +329,7 @@ class ManteiaBackend {
       const dbStatus = await databaseService.testConnection();
       const transactionMonitorStatus = transactionMonitorService.getStatus();
       const bridgeStatus = await bridgeManagerService.getHealthStatus();
+      const profileStatus = await userProfileService.getStatus();
 
       return {
         status: 'ok',
@@ -320,6 +349,10 @@ class ManteiaBackend {
             status: bridgeStatus.bridgeManager.initialized ? 'initialized' : 'not_initialized',
             providersCount: bridgeStatus.bridgeManager.providersCount,
             providers: bridgeStatus.providers
+          },
+          userProfile: {
+            status: profileStatus.initialized ? 'initialized' : 'not_initialized',
+            timestamp: profileStatus.timestamp
           }
         },
         system: {
