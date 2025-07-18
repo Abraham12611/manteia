@@ -4,15 +4,9 @@ import Header from './components/Header';
 import AppKitStatus from './components/AppKitStatus';
 import Home from './pages/Home';
 import Markets from './pages/Markets';
+import MarketDetail from './pages/MarketDetail';
 import './theme.css';
 import './App.css';
-
-const MarketDetail = () => (
-  <div className="container" style={{ paddingTop: 'calc(var(--header-height) + var(--space-10))' }}>
-    <h1>Market Detail Page</h1>
-    <p>To be implemented...</p>
-  </div>
-);
 
 function App() {
   return (
