@@ -1,11 +1,13 @@
 const { ethers } = require('ethers');
 const axios = require('axios');
+const { EventEmitter } = require('events');
 const logger = require('../utils/logger');
 const databaseService = require('../config/database');
 const receiptService = require('./receiptService');
 
-class TransactionMonitorService {
+class TransactionMonitorService extends EventEmitter {
   constructor() {
+    super();
     this.provider = null;
     this.isMonitoring = false;
     this.monitoringInterval = null;
@@ -54,6 +56,14 @@ class TransactionMonitorService {
     });
   }
 
+  /**
+   * Start the transaction monitoring service
+   * (Alias for startMonitoring for compatibility)
+   */
+  async start() {
+    return await this.startMonitoring();
+  }
+
   async startMonitoring() {
     if (this.isMonitoring) {
       logger.warn('Transaction monitoring is already active');
@@ -80,6 +90,14 @@ class TransactionMonitorService {
       this.isMonitoring = false;
       throw error;
     }
+  }
+
+  /**
+   * Stop the transaction monitoring service
+   * (Alias for stopMonitoring for compatibility)
+   */
+  async stop() {
+    return await this.stopMonitoring();
   }
 
   async stopMonitoring() {
@@ -225,12 +243,35 @@ class TransactionMonitorService {
             blockNumber: receipt.blockNumber,
             gasUsed: receipt.gasUsed?.toString()
           });
+
+          // Emit transaction update event
+          this.emit('transactionUpdate', {
+            transactionId,
+            hash: transactionHash,
+            status: 'confirmed',
+            blockNumber: receipt.blockNumber,
+            gasUsed: receipt.gasUsed?.toString(),
+            userId,
+            transactionType,
+            receipt
+          });
         } else if (status === 'failed') {
           this.pendingTransactions.delete(transactionHash);
           logger.transaction('Transaction failed', {
             transactionId,
             hash: transactionHash,
             blockNumber: receipt.blockNumber
+          });
+
+          // Emit transaction update event for failed transaction
+          this.emit('transactionUpdate', {
+            transactionId,
+            hash: transactionHash,
+            status: 'failed',
+            blockNumber: receipt.blockNumber,
+            userId,
+            transactionType,
+            receipt
           });
         }
 
