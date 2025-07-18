@@ -67,6 +67,9 @@ RESOLUTION_BOT_QUICKSTART.md
 # Auto-commit script (exclude from repo)
 auto-commit.sh
 
+# Vercel
+.vercel/
+
 # Build outputs
 /dist/
 /build/
