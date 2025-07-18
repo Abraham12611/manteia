@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, useNetwork } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
 import bridgeService from '../../services/bridgeService';
 import './BridgeForm.css';
 
 const BridgeForm = ({ userAddress, supportedChains, userBalance, onBridgeInitiated, onError }) => {
-  const { chain: currentChain } = useNetwork();
+  const chainId = useChainId();
   const [sourceChain, setSourceChain] = useState('ethereum-sepolia');
   const [destinationChain, setDestinationChain] = useState('mantle-sepolia');
   const [amount, setAmount] = useState('');
@@ -17,19 +17,19 @@ const BridgeForm = ({ userAddress, supportedChains, userBalance, onBridgeInitiat
 
   // Update chains when current chain changes
   useEffect(() => {
-    if (currentChain) {
+    if (chainId) {
       const chainMapping = {
         11155111: 'ethereum-sepolia',
         5003: 'mantle-sepolia'
       };
 
-      const currentChainId = chainMapping[currentChain.id];
+      const currentChainId = chainMapping[chainId];
       if (currentChainId) {
         setSourceChain(currentChainId);
         setDestinationChain(currentChainId === 'ethereum-sepolia' ? 'mantle-sepolia' : 'ethereum-sepolia');
       }
     }
-  }, [currentChain]);
+  }, [chainId]);
 
   // Get quote when amount or chains change
   useEffect(() => {
