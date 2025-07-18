@@ -49,27 +49,24 @@ class DatabaseService {
       throw new Error('Database not connected');
     }
 
-    const start = Date.now();
     try {
       const result = await this.pool.query(text, params);
-      const duration = Date.now() - start;
-
-      logger.debug('Query executed', {
-        duration: `${duration}ms`,
-        rows: result.rowCount,
-        command: result.command
-      });
-
       return result;
     } catch (error) {
-      const duration = Date.now() - start;
-      logger.error('Query failed', {
-        duration: `${duration}ms`,
-        error: error.message,
-        query: text.substring(0, 100) + '...'
-      });
+      logger.error('Database query error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Get the database pool instance
+   * @returns {Pool} The database pool instance
+   */
+  getPool() {
+    if (!this.pool) {
+      throw new Error('Database pool not initialized');
+    }
+    return this.pool;
   }
 
   async getClient() {
