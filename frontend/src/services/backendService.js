@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001/api',
+  baseURL: `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001'}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -48,33 +48,102 @@ class BackendService {
     }
   }
 
-  async getUserByWallet(walletAddress) {
+  async getUser(walletAddress) {
     try {
-      const response = await api.get(`/users/wallet/${walletAddress}`);
+      const response = await api.get(`/users/${walletAddress}`);
       return response.data;
     } catch (error) {
-      if (error.response?.status === 404) {
-        return null;
-      }
       throw this.handleError(error, 'Failed to get user');
     }
   }
 
-  async getUserStats(userId) {
+  async updateUser(walletAddress, userData) {
     try {
-      const response = await api.get(`/users/${userId}/stats`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error, 'Failed to get user statistics');
-    }
-  }
-
-  async updateUser(userId, updates) {
-    try {
-      const response = await api.put(`/users/${userId}`, updates);
+      const response = await api.put(`/users/${walletAddress}`, userData);
       return response.data;
     } catch (error) {
       throw this.handleError(error, 'Failed to update user');
+    }
+  }
+
+  async getUserProfile(walletAddress) {
+    try {
+      const response = await api.get(`/profile/${walletAddress}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get user profile');
+    }
+  }
+
+  async updateUserProfile(walletAddress, profileData) {
+    try {
+      const response = await api.put(`/profile/${walletAddress}`, profileData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to update user profile');
+    }
+  }
+
+  // Market Management
+  async getMarkets(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.category) params.append('category', filters.category);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.offset) params.append('offset', filters.offset);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.sortBy) params.append('sortBy', filters.sortBy);
+      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
+
+      const response = await api.get(`/trading/markets?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get markets');
+    }
+  }
+
+  async getMarketById(marketId) {
+    try {
+      const response = await api.get(`/trading/markets/${marketId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get market');
+    }
+  }
+
+  async getFeaturedMarkets(limit = 6) {
+    try {
+      const response = await api.get(`/trading/markets/featured?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get featured markets');
+    }
+  }
+
+  async getMarketsByCategory(category, limit = 10) {
+    try {
+      const response = await api.get(`/trading/markets/category/${category}?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get markets by category');
+    }
+  }
+
+  async searchMarkets(query, filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      params.append('q', query);
+
+      if (filters.category) params.append('category', filters.category);
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.offset) params.append('offset', filters.offset);
+
+      const response = await api.get(`/trading/markets/search?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to search markets');
     }
   }
 
@@ -88,12 +157,12 @@ class BackendService {
     }
   }
 
-  async getTransactionStatus(transactionHash) {
+  async getTransaction(transactionId) {
     try {
-      const response = await api.get(`/transactions/${transactionHash}/status`);
+      const response = await api.get(`/transactions/${transactionId}`);
       return response.data;
     } catch (error) {
-      throw this.handleError(error, 'Failed to get transaction status');
+      throw this.handleError(error, 'Failed to get transaction');
     }
   }
 
@@ -263,19 +332,77 @@ class BackendService {
     }
   }
 
-  // Utility Methods
-  handleError(error, defaultMessage) {
-    const errorMessage = error.response?.data?.error || error.message || defaultMessage;
-    const errorCode = error.response?.data?.code || 'UNKNOWN_ERROR';
-    const statusCode = error.response?.status || 500;
+  // Trading Data
+  async getMarketOrderBook(marketId) {
+    try {
+      const response = await api.get(`/trading/markets/${marketId}/orderbook`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get market order book');
+    }
+  }
 
-    return {
-      message: errorMessage,
-      code: errorCode,
-      status: statusCode,
-      timestamp: new Date().toISOString(),
-      original: error
-    };
+  async getMarketPrice(marketId) {
+    try {
+      const response = await api.get(`/trading/markets/${marketId}/price`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get market price');
+    }
+  }
+
+  async getMarketTrades(marketId, filters = {}) {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.offset) params.append('offset', filters.offset);
+      if (filters.fromTime) params.append('fromTime', filters.fromTime);
+      if (filters.toTime) params.append('toTime', filters.toTime);
+
+      const response = await api.get(`/trading/markets/${marketId}/trades?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get market trades');
+    }
+  }
+
+  async getUserPositions(walletAddress, marketId = null) {
+    try {
+      const params = new URLSearchParams();
+      if (marketId) params.append('marketId', marketId);
+
+      const response = await api.get(`/trading/positions/user/${walletAddress}?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get user positions');
+    }
+  }
+
+  async getUserActivity(walletAddress, filters = {}) {
+    try {
+      const params = new URLSearchParams();
+
+      if (filters.limit) params.append('limit', filters.limit);
+      if (filters.offset) params.append('offset', filters.offset);
+      if (filters.type) params.append('type', filters.type);
+      if (filters.marketId) params.append('marketId', filters.marketId);
+
+      const response = await api.get(`/trading/activity/user/${walletAddress}?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get user activity');
+    }
+  }
+
+  // Utility Methods
+  async getTransactionFromBlockchain(transactionHash) {
+    try {
+      const response = await api.get(`/blockchain/transaction/${transactionHash}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error, 'Failed to get transaction from blockchain');
+    }
   }
 
   // Integration with existing contract service
@@ -302,26 +429,25 @@ class BackendService {
     }
   }
 
-  async getTransactionFromBlockchain(transactionHash) {
-    // This would typically use ethers.js to get transaction details
-    // For now, return a placeholder
-    return {
-      hash: transactionHash,
-      from: '0x0000000000000000000000000000000000000000',
-      to: '0x0000000000000000000000000000000000000000',
-      value: '0'
-    };
-  }
-
   // WebSocket connection for real-time updates (future enhancement)
   connectWebSocket(userId) {
     // Implementation would go here for real-time transaction updates
     console.log('WebSocket connection would be established here for user:', userId);
   }
 
-  disconnectWebSocket() {
-    // Implementation would go here
-    console.log('WebSocket would be disconnected here');
+  // Utility Methods
+  handleError(error, defaultMessage) {
+    const errorMessage = error.response?.data?.error || error.message || defaultMessage;
+    const errorCode = error.response?.data?.code || 'UNKNOWN_ERROR';
+    const statusCode = error.response?.status || 500;
+
+    return {
+      message: errorMessage,
+      code: errorCode,
+      status: statusCode,
+      timestamp: new Date().toISOString(),
+      original: error
+    };
   }
 }
 
