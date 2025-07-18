@@ -1,66 +1,69 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
-import { ethers } from 'ethers';
+import { useAccount, usePublicClient } from 'wagmi';
 import contractService from '../services/contractService';
+import tradingService from '../services/tradingService';
 
 export const useContract = () => {
-  const { address, isConnected } = useAppKitAccount();
-  const { walletProvider } = useAppKitProvider('eip155');
+  const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Initialize contract service when wallet connects
+  // Initialize contract and trading services
   useEffect(() => {
-    const initializeContract = async () => {
-      if (isConnected && walletProvider) {
-        try {
-          setIsLoading(true);
-          setError(null);
+    const initializeServices = async () => {
+      if (!publicClient) return;
 
-          const provider = new ethers.BrowserProvider(walletProvider);
-          const signer = await provider.getSigner();
-
-          await contractService.init(provider, signer);
-          setIsInitialized(true);
-        } catch (err) {
-          console.error('Error initializing contract:', err);
-          setError(contractService.formatTransactionError(err));
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setIsInitialized(false);
+      try {
+        // Initialize contract service
+        await contractService.init(publicClient);
+        await tradingService.init(publicClient);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize services:', error);
+        setError(`Failed to initialize: ${error.message}`);
       }
     };
 
-    initializeContract();
-  }, [isConnected, walletProvider]);
+    initializeServices();
+  }, [publicClient]);
 
-  // Get user balances for a market
-  const getUserBalances = useCallback(async (marketId) => {
+  // Get user's MNT balance
+  const getMNTBalance = useCallback(async () => {
     if (!isInitialized || !address) {
-      throw new Error('Contract not initialized or wallet not connected');
+      throw new Error('Services not initialized or wallet not connected');
     }
 
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const balances = await contractService.getUserBalances(address, marketId);
-      return balances;
+      const balance = await contractService.getMNTBalance(address);
+      return balance;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
       setError(formattedError);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
   }, [isInitialized, address]);
 
-  // Place an order
-  const placeOrder = useCallback(async (marketId, price, amount, isBuy) => {
+  // Get user's collateral balance
+  const getUserCollateral = useCallback(async () => {
+    if (!isInitialized || !address) {
+      throw new Error('Services not initialized or wallet not connected');
+    }
+
+    try {
+      const collateral = await contractService.getUserCollateral(address);
+      return collateral;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    }
+  }, [isInitialized, address]);
+
+  // Deposit MNT as collateral
+  const depositCollateral = useCallback(async (amount) => {
     if (!isInitialized) {
       throw new Error('Contract not initialized');
     }
@@ -69,7 +72,15 @@ export const useContract = () => {
       setIsLoading(true);
       setError(null);
 
-      const result = await contractService.placeOrder(marketId, price, amount, isBuy);
+      const result = await contractService.depositCollateral(amount);
+
+      // Track transaction in backend
+      await tradingService.monitorTransaction(result.transactionHash, {
+        type: 'deposit',
+        amount: amount,
+        userAddress: address
+      });
+
       return result;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
@@ -78,20 +89,28 @@ export const useContract = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized]);
+  }, [isInitialized, address]);
 
-  // Get order details
-  const getOrderDetails = useCallback(async (marketId) => {
-    if (!isInitialized || !address) {
-      throw new Error('Contract not initialized or wallet not connected');
+  // Withdraw MNT collateral
+  const withdrawCollateral = useCallback(async (amount) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
     }
 
     try {
       setIsLoading(true);
       setError(null);
 
-      const orderDetails = await contractService.getOrderDetails(marketId, address);
-      return orderDetails;
+      const result = await contractService.withdrawCollateral(amount);
+
+      // Track transaction in backend
+      await tradingService.monitorTransaction(result.transactionHash, {
+        type: 'withdraw',
+        amount: amount,
+        userAddress: address
+      });
+
+      return result;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
       setError(formattedError);
@@ -101,62 +120,180 @@ export const useContract = () => {
     }
   }, [isInitialized, address]);
 
-  // Get gas estimate for a transaction
-  const estimateGas = useCallback(async (method, params) => {
-    if (!isInitialized) {
-      throw new Error('Contract not initialized');
+  // Get user's share token balances
+  const getUserBalances = useCallback(async (marketId) => {
+    if (!isInitialized || !address) {
+      throw new Error('Services not initialized or wallet not connected');
     }
 
     try {
-      const estimate = await contractService.estimateGas(method, params);
-      return estimate;
+      const balances = await contractService.getUserBalances(address, marketId);
+      return balances;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
       setError(formattedError);
       throw err;
     }
-  }, [isInitialized]);
+  }, [isInitialized, address]);
 
-  // Get current gas price
-  const getCurrentGasPrice = useCallback(async () => {
+  // Place an order
+  const placeOrder = useCallback(async (marketId, outcome, price, size, orderType = 'limit') => {
     if (!isInitialized) {
       throw new Error('Contract not initialized');
     }
 
     try {
-      const gasPrice = await contractService.getCurrentGasPrice();
-      return gasPrice;
+      setIsLoading(true);
+      setError(null);
+
+      // Validate order parameters
+      tradingService.validateOrderParams(marketId, outcome, price, size);
+
+      // Place order via contract
+      const contractResult = await contractService.placeOrder(
+        marketId,
+        outcome,
+        price,
+        size,
+        orderType
+      );
+
+      // Record order in backend
+      const backendResult = await tradingService.placeOrder(
+        marketId,
+        outcome,
+        price,
+        size,
+        orderType
+      );
+
+      // Monitor transaction
+      await tradingService.monitorTransaction(contractResult.transactionHash, {
+        type: 'order',
+        marketId: marketId,
+        outcome: outcome,
+        price: price,
+        size: size,
+        orderType: orderType,
+        userAddress: address
+      });
+
+      return {
+        ...contractResult,
+        orderId: backendResult.data?.orderId
+      };
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
       setError(formattedError);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
-  }, [isInitialized]);
+  }, [isInitialized, address]);
 
-  // Verify contract deployment
-  const verifyContractDeployment = useCallback(async () => {
+  // Cancel an order
+  const cancelOrder = useCallback(async (orderId) => {
     if (!isInitialized) {
       throw new Error('Contract not initialized');
     }
 
     try {
-      const verification = await contractService.verifyContractDeployment();
-      return verification;
+      setIsLoading(true);
+      setError(null);
+
+      // Cancel order via contract
+      const contractResult = await contractService.cancelOrder(orderId);
+
+      // Cancel order in backend
+      await tradingService.cancelOrder(orderId);
+
+      return contractResult;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isInitialized]);
+
+  // Get market order book
+  const getMarketOrderBook = useCallback(async (marketId) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      // Get order book from backend (more efficient than contract)
+      const result = await tradingService.getMarketOrderBook(marketId);
+      return result.data;
+    } catch (err) {
+      // Fallback to contract if backend fails
+      try {
+        const contractResult = await contractService.getOrderBook(marketId);
+        return contractResult;
+      } catch (contractErr) {
+        const formattedError = contractService.formatTransactionError(contractErr);
+        setError(formattedError);
+        throw contractErr;
+      }
+    }
+  }, [isInitialized]);
+
+  // Get market price
+  const getMarketPrice = useCallback(async (marketId) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      // Get price from backend first
+      const result = await tradingService.getMarketPrice(marketId);
+      return result.data;
+    } catch (err) {
+      // Fallback to contract
+      try {
+        const contractResult = await contractService.getMarketPrice(marketId);
+        return contractResult;
+      } catch (contractErr) {
+        const formattedError = contractService.formatTransactionError(contractErr);
+        setError(formattedError);
+        throw contractErr;
+      }
+    }
+  }, [isInitialized]);
+
+  // Get user positions
+  const getUserPositions = useCallback(async (marketId = null) => {
+    if (!isInitialized || !address) {
+      throw new Error('Services not initialized or wallet not connected');
+    }
+
+    try {
+      const result = await tradingService.getUserPositions(address, marketId);
+      return result.data;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
       setError(formattedError);
       throw err;
     }
-  }, [isInitialized]);
+  }, [isInitialized, address]);
 
-  // Listen to contract events
-  const listenToEvents = useCallback((eventName, callback) => {
-    if (!isInitialized) {
-      throw new Error('Contract not initialized');
+  // Get user activity
+  const getUserActivity = useCallback(async (filters = {}) => {
+    if (!isInitialized || !address) {
+      throw new Error('Services not initialized or wallet not connected');
     }
 
-    return contractService.listenToEvents(eventName, callback);
-  }, [isInitialized]);
+    try {
+      const result = await tradingService.getUserActivity(address, filters);
+      return result.data;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    }
+  }, [isInitialized, address]);
 
   // Redeem winnings
   const redeemWinnings = useCallback(async (marketId, outcome) => {
@@ -169,6 +306,15 @@ export const useContract = () => {
       setError(null);
 
       const result = await contractService.redeemWinnings(marketId, outcome);
+
+      // Track transaction
+      await tradingService.monitorTransaction(result.transactionHash, {
+        type: 'redeem',
+        marketId: marketId,
+        outcome: outcome,
+        userAddress: address
+      });
+
       return result;
     } catch (err) {
       const formattedError = contractService.formatTransactionError(err);
@@ -177,7 +323,7 @@ export const useContract = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isInitialized]);
+  }, [isInitialized, address]);
 
   // Resolve market (admin function)
   const resolveMarket = useCallback(async (marketId, outcome) => {
@@ -232,12 +378,93 @@ export const useContract = () => {
     }
   }, [isInitialized]);
 
+  // Get market statistics
+  const getMarketStats = useCallback(async (marketId) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      // Get stats from backend first
+      const result = await tradingService.getMarketStats(marketId);
+      return result.data;
+    } catch (err) {
+      // Fallback to contract
+      try {
+        const contractResult = await contractService.getMarketStats(marketId);
+        return contractResult;
+      } catch (contractErr) {
+        const formattedError = contractService.formatTransactionError(contractErr);
+        setError(formattedError);
+        throw contractErr;
+      }
+    }
+  }, [isInitialized]);
+
+  // Subscribe to market updates
+  const subscribeToMarketUpdates = useCallback(async (marketId, callback) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const unsubscribe = await tradingService.subscribeToMarketUpdates(marketId, callback);
+      return unsubscribe;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    }
+  }, [isInitialized]);
+
+  // Estimate gas for transaction
+  const estimateGas = useCallback(async (method, params) => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const gasEstimate = await contractService.estimateGas(method, params);
+      return gasEstimate;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    }
+  }, [isInitialized]);
+
+  // Get current gas price
+  const getCurrentGasPrice = useCallback(async () => {
+    if (!isInitialized) {
+      throw new Error('Contract not initialized');
+    }
+
+    try {
+      const gasPrice = await contractService.getCurrentGasPrice();
+      return gasPrice;
+    } catch (err) {
+      const formattedError = contractService.formatTransactionError(err);
+      setError(formattedError);
+      throw err;
+    }
+  }, [isInitialized]);
+
   // Clear error
   const clearError = useCallback(() => {
     setError(null);
   }, []);
 
-    return {
+  // Calculate order cost
+  const calculateOrderCost = useCallback((price, size) => {
+    return tradingService.calculateOrderCost(price, size);
+  }, []);
+
+  // Calculate potential payout
+  const calculatePotentialPayout = useCallback((size, outcomePrice) => {
+    return tradingService.calculatePotentialPayout(size, outcomePrice);
+  }, []);
+
+  return {
     // State
     isInitialized,
     isLoading,
@@ -245,22 +472,39 @@ export const useContract = () => {
     address,
     isConnected,
 
-    // Methods
+    // Balance and Collateral
+    getMNTBalance,
+    getUserCollateral,
+    depositCollateral,
+    withdrawCollateral,
     getUserBalances,
+
+    // Trading
     placeOrder,
-    getOrderDetails,
-    estimateGas,
-    getCurrentGasPrice,
-    verifyContractDeployment,
-    listenToEvents,
+    cancelOrder,
+    getMarketOrderBook,
+    getMarketPrice,
+    getUserPositions,
+    getUserActivity,
+    getMarketStats,
+    subscribeToMarketUpdates,
+
+    // Market Resolution
     redeemWinnings,
     resolveMarket,
     isMarketResolved,
     getMarketOutcome,
-    clearError,
 
-    // Direct access to contract service for advanced usage
-    contractService
+    // Utilities
+    estimateGas,
+    getCurrentGasPrice,
+    clearError,
+    calculateOrderCost,
+    calculatePotentialPayout,
+
+    // Direct access to services for advanced usage
+    contractService,
+    tradingService
   };
 };
 
