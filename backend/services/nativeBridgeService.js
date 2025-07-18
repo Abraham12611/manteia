@@ -30,123 +30,191 @@ class NativeBridgeService {
 
   async initialize() {
     try {
-      // Initialize providers
-      this.l1Provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_SEPOLIA_RPC_URL);
-      this.l2Provider = new ethers.JsonRpcProvider(process.env.MANTLE_SEPOLIA_RPC_URL);
+      // Check required environment variables
+      const requiredEnvVars = {
+        ETHEREUM_SEPOLIA_RPC_URL: process.env.ETHEREUM_SEPOLIA_RPC_URL || process.env.ETHEREUM_RPC_URL,
+        MANTLE_SEPOLIA_RPC_URL: process.env.MANTLE_SEPOLIA_RPC_URL,
+        MANTLE_BRIDGE_L1_ADDRESS: process.env.MANTLE_BRIDGE_L1_ADDRESS || '0xc92470D7Ffa21473611ab6c6e2FcFB8637c8f330',
+        MANTLE_BRIDGE_L2_ADDRESS: process.env.MANTLE_BRIDGE_L2_ADDRESS || '0x4200000000000000000000000000000000000010'
+      };
 
-      // Initialize bridge contracts
+      // Validate required variables
+      const missingVars = Object.entries(requiredEnvVars)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
+
+      if (missingVars.length > 0) {
+        logger.warn(`Missing environment variables for bridge service: ${missingVars.join(', ')}`);
+        logger.warn('Bridge service will use default values where possible');
+      }
+
+      // Initialize providers with fallback URLs
+      const ethereumRpcUrl = requiredEnvVars.ETHEREUM_SEPOLIA_RPC_URL ||
+        'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID';
+      const mantleRpcUrl = requiredEnvVars.MANTLE_SEPOLIA_RPC_URL ||
+        'https://rpc.sepolia.mantle.xyz';
+
+      this.l1Provider = new ethers.JsonRpcProvider(ethereumRpcUrl);
+      this.l2Provider = new ethers.JsonRpcProvider(mantleRpcUrl);
+
+      // Initialize bridge contracts with default addresses
       this.l1Bridge = new ethers.Contract(
-        process.env.MANTLE_BRIDGE_L1_ADDRESS,
+        requiredEnvVars.MANTLE_BRIDGE_L1_ADDRESS,
         L1_BRIDGE_ABI,
         this.l1Provider
       );
 
       this.l2Bridge = new ethers.Contract(
-        process.env.MANTLE_BRIDGE_L2_ADDRESS,
+        requiredEnvVars.MANTLE_BRIDGE_L2_ADDRESS,
         L2_BRIDGE_ABI,
         this.l2Provider
       );
 
-      // Set up event listeners
+      // Test connections
+      try {
+        await this.l1Provider.getNetwork();
+        logger.info('L1 provider connected successfully');
+      } catch (error) {
+        logger.warn('Failed to connect to L1 provider:', error.message);
+      }
+
+      try {
+        await this.l2Provider.getNetwork();
+        logger.info('L2 provider connected successfully');
+      } catch (error) {
+        logger.warn('Failed to connect to L2 provider:', error.message);
+      }
+
+      // Set up event listeners (with error handling)
       await this.setupEventListeners();
 
       this.initialized = true;
       logger.info('Native bridge service initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize native bridge service:', error);
-      throw error;
+      // Don't throw error - allow service to continue with limited functionality
+      this.initialized = false;
     }
   }
 
   async setupEventListeners() {
-    // L1 (Ethereum Sepolia) event listeners
-    this.l1Bridge.on('ETHDepositInitiated', async (from, to, amount, extraData, event) => {
-      logger.info('ETH deposit initiated on L1:', {
-        from,
-        to,
-        amount: ethers.formatEther(amount),
-        txHash: event.transactionHash
+    try {
+      // Only set up event listeners if providers are properly initialized
+      if (!this.l1Provider || !this.l2Provider || !this.l1Bridge || !this.l2Bridge) {
+        logger.warn('Cannot setup event listeners - providers not properly initialized');
+        return;
+      }
+
+      // L1 (Ethereum Sepolia) event listeners
+      this.l1Bridge.on('ETHDepositInitiated', async (from, to, amount, extraData, event) => {
+        try {
+          logger.info('ETH deposit initiated on L1:', {
+            from,
+            to,
+            amount: ethers.formatEther(amount),
+            txHash: event.transactionHash
+          });
+
+          await this.handleDepositInitiated({
+            from,
+            to,
+            amount,
+            token: 'ETH',
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+            sourceChain: 'ethereum-sepolia',
+            destinationChain: 'mantle-sepolia'
+          });
+        } catch (error) {
+          logger.error('Error handling ETH deposit initiated:', error);
+        }
       });
 
-      await this.handleDepositInitiated({
-        from,
-        to,
-        amount,
-        token: 'ETH',
-        txHash: event.transactionHash,
-        blockNumber: event.blockNumber,
-        sourceChain: 'ethereum-sepolia',
-        destinationChain: 'mantle-sepolia'
-      });
-    });
+      this.l1Bridge.on('ERC20DepositInitiated', async (l1Token, l2Token, from, to, amount, extraData, event) => {
+        try {
+          logger.info('ERC20 deposit initiated on L1:', {
+            l1Token,
+            l2Token,
+            from,
+            to,
+            amount: amount.toString(),
+            txHash: event.transactionHash
+          });
 
-    this.l1Bridge.on('ERC20DepositInitiated', async (l1Token, l2Token, from, to, amount, extraData, event) => {
-      logger.info('ERC20 deposit initiated on L1:', {
-        l1Token,
-        l2Token,
-        from,
-        to,
-        amount: amount.toString(),
-        txHash: event.transactionHash
-      });
-
-      await this.handleDepositInitiated({
-        from,
-        to,
-        amount,
-        l1Token,
-        l2Token,
-        txHash: event.transactionHash,
-        blockNumber: event.blockNumber,
-        sourceChain: 'ethereum-sepolia',
-        destinationChain: 'mantle-sepolia'
-      });
-    });
-
-    // L2 (Mantle Sepolia) event listeners
-    this.l2Bridge.on('WithdrawalInitiated', async (l1Token, l2Token, from, to, amount, extraData, event) => {
-      logger.info('Withdrawal initiated on L2:', {
-        l1Token,
-        l2Token,
-        from,
-        to,
-        amount: amount.toString(),
-        txHash: event.transactionHash
+          await this.handleDepositInitiated({
+            from,
+            to,
+            amount,
+            l1Token,
+            l2Token,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+            sourceChain: 'ethereum-sepolia',
+            destinationChain: 'mantle-sepolia'
+          });
+        } catch (error) {
+          logger.error('Error handling ERC20 deposit initiated:', error);
+        }
       });
 
-      await this.handleWithdrawalInitiated({
-        from,
-        to,
-        amount,
-        l1Token,
-        l2Token,
-        txHash: event.transactionHash,
-        blockNumber: event.blockNumber,
-        sourceChain: 'mantle-sepolia',
-        destinationChain: 'ethereum-sepolia'
-      });
-    });
+      // L2 (Mantle Sepolia) event listeners
+      this.l2Bridge.on('WithdrawalInitiated', async (l1Token, l2Token, from, to, amount, extraData, event) => {
+        try {
+          logger.info('Withdrawal initiated on L2:', {
+            l1Token,
+            l2Token,
+            from,
+            to,
+            amount: amount.toString(),
+            txHash: event.transactionHash
+          });
 
-    this.l2Bridge.on('DepositFinalized', async (l1Token, l2Token, from, to, amount, extraData, event) => {
-      logger.info('Deposit finalized on L2:', {
-        l1Token,
-        l2Token,
-        from,
-        to,
-        amount: amount.toString(),
-        txHash: event.transactionHash
+          await this.handleWithdrawalInitiated({
+            from,
+            to,
+            amount,
+            l1Token,
+            l2Token,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber,
+            sourceChain: 'mantle-sepolia',
+            destinationChain: 'ethereum-sepolia'
+          });
+        } catch (error) {
+          logger.error('Error handling withdrawal initiated:', error);
+        }
       });
 
-      await this.handleDepositFinalized({
-        from,
-        to,
-        amount,
-        l1Token,
-        l2Token,
-        txHash: event.transactionHash,
-        blockNumber: event.blockNumber
+      this.l2Bridge.on('DepositFinalized', async (l1Token, l2Token, from, to, amount, extraData, event) => {
+        try {
+          logger.info('Deposit finalized on L2:', {
+            l1Token,
+            l2Token,
+            from,
+            to,
+            amount: amount.toString(),
+            txHash: event.transactionHash
+          });
+
+          await this.handleDepositFinalized({
+            from,
+            to,
+            amount,
+            l1Token,
+            l2Token,
+            txHash: event.transactionHash,
+            blockNumber: event.blockNumber
+          });
+        } catch (error) {
+          logger.error('Error handling deposit finalized:', error);
+        }
       });
-    });
+
+      logger.info('Event listeners setup completed');
+    } catch (error) {
+      logger.error('Failed to setup event listeners:', error);
+      // Don't throw error - allow service to continue
+    }
   }
 
   async bridgeToMantle(params) {
@@ -638,6 +706,129 @@ class NativeBridgeService {
       logger.info('Native bridge service stopped');
     } catch (error) {
       logger.error('Failed to stop native bridge service:', error);
+    }
+  }
+
+  // Required interface methods for BridgeManagerService compatibility
+
+  /**
+   * Get supported chains for this bridge provider
+   * @returns {Promise<Array<Object>>} Array of supported chains
+   */
+  async getSupportedChains() {
+    return [
+      {
+        id: 'ethereum-sepolia',
+        chainId: 11155111,
+        name: 'Ethereum Sepolia',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: [process.env.ETHEREUM_SEPOLIA_RPC_URL],
+        blockExplorerUrls: ['https://sepolia.etherscan.io']
+      },
+      {
+        id: 'mantle-sepolia',
+        chainId: 5003,
+        name: 'Mantle Sepolia',
+        nativeCurrency: { name: 'MNT', symbol: 'MNT', decimals: 18 },
+        rpcUrls: [process.env.MANTLE_SEPOLIA_RPC_URL],
+        blockExplorerUrls: ['https://sepolia.mantlescan.xyz']
+      }
+    ];
+  }
+
+  /**
+   * Get quote for bridge operation (alias for getBridgeQuote)
+   * @param {Object} params - Quote parameters
+   * @returns {Promise<Object>} Quote object
+   */
+  async getQuote(params) {
+    return await this.getBridgeQuote(params);
+  }
+
+  /**
+   * Execute bridge operation
+   * @param {Object} params - Bridge parameters
+   * @returns {Promise<Object>} Bridge result
+   */
+  async executeBridge(params) {
+    const { sourceChain, destinationChain, userAddress, amount, token } = params;
+
+    try {
+      // Determine bridge direction
+      if (sourceChain === 'ethereum-sepolia' && destinationChain === 'mantle-sepolia') {
+        return await this.bridgeToMantle({ userAddress, amount, token });
+      } else if (sourceChain === 'mantle-sepolia' && destinationChain === 'ethereum-sepolia') {
+        return await this.bridgeFromMantle({ userAddress, amount, token });
+      } else {
+        throw new Error(`Unsupported bridge route: ${sourceChain} -> ${destinationChain}`);
+      }
+    } catch (error) {
+      logger.error('Failed to execute bridge:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get bridge statistics
+   * @returns {Promise<Object>} Bridge statistics
+   */
+  async getBridgeStats() {
+    try {
+      const pool = databaseService.getPool();
+
+      const query = `
+        SELECT
+          COUNT(*) as total_bridges,
+          COUNT(CASE WHEN bridge_status = 'completed' THEN 1 END) as completed_bridges,
+          COUNT(CASE WHEN bridge_status IN ('initiated', 'processing', 'challenge_period') THEN 1 END) as pending_bridges,
+          COUNT(CASE WHEN bridge_status = 'failed' THEN 1 END) as failed_bridges,
+          COALESCE(SUM(CAST(source_amount AS DECIMAL)), 0) as total_volume
+        FROM cross_chain_bridges
+        WHERE bridge_provider = 'native-mantle'
+      `;
+
+      const result = await pool.query(query);
+      const stats = result.rows[0];
+
+      return {
+        totalBridges: parseInt(stats.total_bridges),
+        completedBridges: parseInt(stats.completed_bridges),
+        pendingBridges: parseInt(stats.pending_bridges),
+        failedBridges: parseInt(stats.failed_bridges),
+        totalVolume: stats.total_volume.toString()
+      };
+
+    } catch (error) {
+      logger.error('Failed to get bridge stats:', error);
+      return {
+        totalBridges: 0,
+        completedBridges: 0,
+        pendingBridges: 0,
+        failedBridges: 0,
+        totalVolume: '0'
+      };
+    }
+  }
+
+  /**
+   * Get health status
+   * @returns {Promise<Object>} Health status
+   */
+  async getHealthStatus() {
+    try {
+      const status = await this.getStatus();
+      return {
+        ...status,
+        healthy: status.initialized && status.l1Connected && status.l2Connected,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      logger.error('Failed to get health status:', error);
+      return {
+        healthy: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
     }
   }
 }
