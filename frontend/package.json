@@ -21,7 +21,8 @@
     "typescript": "^5.0.0",
     "viem": "^2.32.0",
     "wagmi": "^2.15.7",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@craco/craco": "^7.1.0"
   },
   "scripts": {
     "start": "craco start",
@@ -48,9 +49,7 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "@craco/craco": "^7.1.0"
-  },
+  "devDependencies": {},
   "overrides": {
     "typescript": "^5.0.0"
   },
