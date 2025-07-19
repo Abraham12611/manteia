@@ -90,9 +90,9 @@ coverage/
 out/
 cache_forge/
 backend/services/receiptService.js
-frontend/src/config.js
+
 backend/API_DOCUMENTATION.md
-scripts/config.js
+
 frontend/CREATE_ENV_FILE.md
 frontend/ENV_SETUP.md
 frontend/REOWN_IMPLEMENTATION_FIXES.md
