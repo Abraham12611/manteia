@@ -21,7 +21,6 @@
     "markets:find:crypto": "node scripts/find-polymarket-markets.js --tag Crypto",
     "hardhat:node": "hardhat node",
     "compile": "hardhat compile",
-    "postinstall": "cd backend && npm install && cd ../frontend && npm install",
     "deploy:vercel": "node scripts/deploy-vercel.js",
     "deploy:check": "node scripts/deploy-vercel.js",
     "generate:jwt": "node scripts/generate-jwt-secret.js"
