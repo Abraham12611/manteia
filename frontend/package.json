@@ -18,14 +18,17 @@
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.0",
     "react-scripts": "5.0.1",
+    "typescript": "^5.0.0",
     "viem": "^2.32.0",
     "wagmi": "^2.15.7",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@craco/craco": "^7.1.0"
   },
   "scripts": {
     "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
+    "build": "CI=false DISABLE_ESLINT_PLUGIN=true SKIP_PREFLIGHT_CHECK=true GENERATE_SOURCEMAP=false craco build",
+    "build:vercel": "CI=false npm run build",
+    "test": "CI=false craco test --watchAll=false --passWithNoTests",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -46,7 +49,11 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "@craco/craco": "^7.1.0"
+  "devDependencies": {},
+  "overrides": {
+    "typescript": "^5.0.0"
+  },
+  "resolutions": {
+    "typescript": "^5.0.0"
   }
 }

@@ -67,6 +67,11 @@ RESOLUTION_BOT_QUICKSTART.md
 # Auto-commit script (exclude from repo)
 auto-commit.sh
 
+# Vercel deployment files
+.vercel/
+vercel-env-vars.txt
+VERCEL-DEPLOYMENT-STEPS.md
+
 # Build outputs
 /dist/
 /build/
@@ -85,10 +90,12 @@ coverage/
 out/
 cache_forge/
 backend/services/receiptService.js
-frontend/src/config.js
+
 backend/API_DOCUMENTATION.md
-scripts/config.js
+
 frontend/CREATE_ENV_FILE.md
 frontend/ENV_SETUP.md
 frontend/REOWN_IMPLEMENTATION_FIXES.md
 scripts/config.example.js
+scripts/deploy-vercel.js
+README-DEPLOYMENT.md

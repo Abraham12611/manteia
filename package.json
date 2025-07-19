@@ -1,8 +1,15 @@
 {
   "name": "manteia",
   "version": "1.0.0",
-  "main": "index.js",
+  "private": true,
   "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && CI=false npm run build",
+    "build:backend": "cd backend && npm install",
+    "start": "cd backend && npm start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "hardhat run scripts/deploy-markets.js --network mantle_sepolia",
     "deploy:local": "hardhat run scripts/deploy-markets.js --network localhost",
@@ -13,12 +20,28 @@
     "markets:find:politics": "node scripts/find-polymarket-markets.js --tag Politics",
     "markets:find:crypto": "node scripts/find-polymarket-markets.js --tag Crypto",
     "hardhat:node": "hardhat node",
-    "compile": "hardhat compile"
+    "compile": "hardhat compile",
+    "deploy:vercel": "node scripts/deploy-vercel.js",
+    "deploy:check": "node scripts/deploy-vercel.js",
+    "generate:jwt": "node scripts/generate-jwt-secret.js"
   },
-  "keywords": [],
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "keywords": [
+    "blockchain",
+    "prediction-market",
+    "cross-chain",
+    "mantle",
+    "web3",
+    "defi",
+    "hyperlane",
+    "polymarket"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": "",
+  "license": "MIT",
+  "description": "Cross-Chain Prediction Market Platform built on Mantle with Hyperlane interoperability",
   "devDependencies": {
     "@hyperlane-xyz/core": "^9.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.9",
@@ -27,9 +50,13 @@
     "@openzeppelin/contracts": "^4.9.3",
     "dotenv": "^17.2.0",
     "ethers": "^6.15.0",
-    "hardhat": "^2.25.0"
+    "hardhat": "^2.25.0",
+    "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "axios": "^1.10.0"
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
