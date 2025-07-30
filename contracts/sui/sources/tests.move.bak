@@ -1,0 +1,463 @@
+#[test_only]
+module manteia::tests {
+    use manteia::escrow::{Self, Escrow};
+    use manteia::resolver::{Self, ResolverRegistry};
+    use manteia::utils;
+    use manteia::batch_escrow;
+    use sui::test_scenario::{Self, Scenario};
+    use sui::coin::{Self, Coin};
+    use sui::clock::{Self, Clock};
+    use sui::sui::SUI;
+    use std::vector;
+    use std::hash;
+
+    // Test addresses
+    const SENDER: address = @0x1;
+    const RECIPIENT: address = @0x2;
+    const RESOLVER: address = @0x3;
+    const ADMIN: address = @0x4;
+
+    // Test constants
+    const TEST_AMOUNT: u64 = 1000;
+    const TEST_DURATION: u64 = 3600000; // 1 hour in milliseconds
+    const SECRET: vector<u8> = b"test_secret_preimage_32_bytes_xx";
+
+    #[test]
+    fun test_create_and_claim_escrow() {
+        let mut scenario = test_scenario::begin(SENDER);
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        
+        // Create escrow
+        {
+            let coin = coin::mint_for_testing<SUI>(TEST_AMOUNT, scenario.ctx());
+            let hash = hash::sha3_256(&SECRET);
+            
+            escrow::create_escrow(
+                coin,
+                RECIPIENT,
+                RESOLVER,
+                hash,
+                TEST_DURATION,
+                b"test_cross_chain_id",
+                &clock,
+                scenario.ctx()
+            );
+        };
+
+        // Claim escrow with correct secret
+        scenario.next_tx(RECIPIENT);
+        {
+            let mut escrow = scenario.take_shared<Escrow<SUI>>();
+            
+            let claimed_coin = escrow::claim_with_secret(
+                &mut escrow,
+                SECRET,
+                &clock,
+                scenario.ctx()
+            );
+
+            assert!(coin::value(&claimed_coin) == TEST_AMOUNT, 0);
+            coin::burn_for_testing(claimed_coin);
+            
+            scenario.return_shared(escrow);
+        };
+
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+
+    #[test]
+    fun test_escrow_timeout_and_cancel() {
+        let mut scenario = test_scenario::begin(SENDER);
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        
+        // Create escrow
+        {
+            let coin = coin::mint_for_testing<SUI>(TEST_AMOUNT, scenario.ctx());
+            let hash = hash::sha3_256(&SECRET);
+            
+            escrow::create_escrow(
+                coin,
+                RECIPIENT,
+                RESOLVER,
+                hash,
+                TEST_DURATION,
+                b"test_cross_chain_id",
+                &clock,
+                scenario.ctx()
+            );
+        };
+
+        // Advance time past expiry
+        clock.increment_for_testing(TEST_DURATION + 1000);
+
+        // Cancel expired escrow
+        scenario.next_tx(SENDER);
+        {
+            let mut escrow = scenario.take_shared<Escrow<SUI>>();
+            
+            let refunded_coin = escrow::cancel_escrow(
+                &mut escrow,
+                &clock,
+                scenario.ctx()
+            );
+
+            assert!(coin::value(&refunded_coin) == TEST_AMOUNT, 0);
+            coin::burn_for_testing(refunded_coin);
+            
+            scenario.return_shared(escrow);
+        };
+
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+
+    #[test]
+    #[expected_failure(abort_code = escrow::EInvalidSecret)]
+    fun test_escrow_invalid_secret() {
+        let mut scenario = test_scenario::begin(SENDER);
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        
+        // Create escrow
+        {
+            let coin = coin::mint_for_testing<SUI>(TEST_AMOUNT, scenario.ctx());
+            let hash = hash::sha3_256(&SECRET);
+            
+            escrow::create_escrow(
+                coin,
+                RECIPIENT,
+                RESOLVER,
+                hash,
+                TEST_DURATION,
+                b"test_cross_chain_id",
+                &clock,
+                scenario.ctx()
+            );
+        };
+
+        // Try to claim with wrong secret
+        scenario.next_tx(RECIPIENT);
+        {
+            let mut escrow = scenario.take_shared<Escrow<SUI>>();
+            let wrong_secret = b"wrong_secret_preimage_32_bytes_xx";
+            
+            let _claimed_coin = escrow::claim_with_secret(
+                &mut escrow,
+                wrong_secret,
+                &clock,
+                scenario.ctx()
+            );
+            
+            scenario.return_shared(escrow);
+        };
+
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+
+    #[test]
+    fun test_resolver_registry() {
+        let mut scenario = test_scenario::begin(ADMIN);
+        
+        // Initialize registry
+        resolver::init_for_testing(scenario.ctx());
+        
+        scenario.next_tx(ADMIN);
+        {
+            let mut registry = scenario.take_shared<ResolverRegistry>();
+            
+            // Register resolver
+            resolver::register_resolver(
+                &mut registry,
+                RESOLVER,
+                b"Test Resolver",
+                100, // 1% fee
+                scenario.ctx()
+            );
+
+            // Check resolver is active
+            assert!(resolver::is_resolver_active(&registry, RESOLVER), 0);
+            
+            let (is_active, fee_bps, reputation, volume) = resolver::get_resolver_info(&registry, RESOLVER);
+            assert!(is_active, 1);
+            assert!(fee_bps == 100, 2);
+            assert!(reputation == 50, 3); // Initial reputation
+            assert!(volume == 0, 4);
+            
+            scenario.return_shared(registry);
+        };
+
+        scenario.end();
+    }
+
+    #[test]
+    fun test_resolver_stats_update() {
+        let mut scenario = test_scenario::begin(ADMIN);
+        
+        // Initialize registry
+        resolver::init_for_testing(scenario.ctx());
+        
+        scenario.next_tx(ADMIN);
+        {
+            let mut registry = scenario.take_shared<ResolverRegistry>();
+            
+            // Register resolver
+            resolver::register_resolver(
+                &mut registry,
+                RESOLVER,
+                b"Test Resolver",
+                100,
+                scenario.ctx()
+            );
+
+            // Update stats with successful swap
+            resolver::update_resolver_stats(
+                &mut registry,
+                RESOLVER,
+                1000, // volume
+                true, // success
+                1234567890, // timestamp
+                scenario.ctx()
+            );
+
+            let (is_active, fee_bps, reputation, volume) = resolver::get_resolver_info(&registry, RESOLVER);
+            assert!(volume == 1000, 0);
+            assert!(reputation == 100, 1); // 100% success rate
+            
+            scenario.return_shared(registry);
+        };
+
+        scenario.end();
+    }
+
+    #[test]
+    fun test_utils_functions() {
+        // Test hash verification
+        let secret = b"test_secret";
+        let hash = hash::sha3_256(secret);
+        assert!(utils::verify_preimage(*secret, hash), 0);
+
+        // Test time conversion
+        let ms = 3600000; // 1 hour in ms
+        let seconds = utils::ms_to_seconds(ms);
+        assert!(seconds == 3600, 1);
+
+        let back_to_ms = utils::seconds_to_ms(seconds);
+        assert!(back_to_ms == ms, 2);
+
+        // Test time buffer
+        let buffered = utils::add_time_buffer(ms);
+        assert!(buffered > ms, 3);
+
+        // Test fee calculation
+        let amount = 1000;
+        let fee_bps = 100; // 1%
+        let fee = utils::calculate_fee(amount, fee_bps);
+        assert!(fee == 10, 4);
+    }
+
+    #[test]
+    fun test_cross_chain_id_generation() {
+        let eth_address = x"1234567890123456789012345678901234567890"; // 20 bytes
+        let sui_address = @0x123;
+        let amount = 1000;
+        let nonce = 12345;
+
+        let cross_chain_id = utils::generate_cross_chain_id(
+            eth_address,
+            sui_address,
+            amount,
+            nonce
+        );
+
+        // Should generate a 32-byte hash
+        assert!(vector::length(&cross_chain_id) == 32, 0);
+
+        // Should be deterministic
+        let cross_chain_id2 = utils::generate_cross_chain_id(
+            eth_address,
+            sui_address,
+            amount,
+            nonce
+        );
+        assert!(cross_chain_id == cross_chain_id2, 1);
+    }
+
+    #[test]
+    fun test_batch_escrow_split() {
+        let mut scenario = test_scenario::begin(SENDER);
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        
+        // Create batch escrow with coin splitting
+        {
+            let total_amount = 1000;
+            let coin = coin::mint_for_testing<SUI>(total_amount, scenario.ctx());
+            
+            let recipients = vector[RECIPIENT, @0x5];
+            let resolvers = vector[RESOLVER, RESOLVER];
+            let amounts = vector[600, 400];
+            let parent_hash = hash::sha3_256(b"parent_order");
+
+            batch_escrow::create_batch_escrow_split(
+                coin,
+                recipients,
+                resolvers,
+                amounts,
+                parent_hash,
+                TEST_DURATION,
+                b"batch_cross_chain_id",
+                &clock,
+                scenario.ctx()
+            );
+        };
+
+        // Check batch was created
+        scenario.next_tx(SENDER);
+        {
+            let batch = scenario.take_shared<batch_escrow::BatchEscrow>();
+            
+            let (creator, total_parts, claimed_parts, total_amount, _, _, is_completed) = 
+                batch_escrow::get_batch_info(&batch);
+            
+            assert!(creator == SENDER, 0);
+            assert!(total_parts == 2, 1);
+            assert!(claimed_parts == 0, 2);
+            assert!(total_amount == 1000, 3);
+            assert!(!is_completed, 4);
+            
+            scenario.return_shared(batch);
+        };
+
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+
+    #[test]
+    fun test_partial_hash_generation() {
+        let parent_hash = hash::sha3_256(b"parent_order");
+        
+        let hash1 = utils::generate_partial_hash(parent_hash, 0, 5);
+        let hash2 = utils::generate_partial_hash(parent_hash, 1, 5);
+        let hash3 = utils::generate_partial_hash(parent_hash, 0, 5); // Same as hash1
+
+        // Different parts should have different hashes
+        assert!(hash1 != hash2, 0);
+        
+        // Same parameters should produce same hash
+        assert!(hash1 == hash3, 1);
+        
+        // All should be 32 bytes
+        assert!(vector::length(&hash1) == 32, 2);
+        assert!(vector::length(&hash2) == 32, 3);
+    }
+
+    #[test]
+    fun test_merkle_operations() {
+        let secret = b"secret123";
+        let amount = 1000;
+        let recipient = @0x123;
+
+        let leaf = utils::create_merkle_leaf(secret, amount, recipient);
+        assert!(vector::length(&leaf) == 32, 0);
+
+        // Test simple merkle proof (single element tree)
+        let root = leaf;
+        let proof = vector::empty<vector<u8>>();
+        
+        assert!(utils::verify_merkle_proof(leaf, root, proof), 1);
+    }
+
+    // Integration test combining multiple components
+    #[test]
+    fun test_full_cross_chain_flow_simulation() {
+        let mut scenario = test_scenario::begin(ADMIN);
+        let mut clock = clock::create_for_testing(scenario.ctx());
+        
+        // 1. Initialize resolver registry
+        resolver::init_for_testing(scenario.ctx());
+        
+        scenario.next_tx(ADMIN);
+        {
+            let mut registry = scenario.take_shared<ResolverRegistry>();
+            
+            // Register resolver
+            resolver::register_resolver(
+                &mut registry,
+                RESOLVER,
+                b"Cross-Chain Resolver",
+                50, // 0.5% fee
+                scenario.ctx()
+            );
+            
+            scenario.return_shared(registry);
+        };
+
+        // 2. Create cross-chain escrow
+        scenario.next_tx(SENDER);
+        {
+            let coin = coin::mint_for_testing<SUI>(TEST_AMOUNT, scenario.ctx());
+            let hash = hash::sha3_256(&SECRET);
+            let eth_address = x"1234567890123456789012345678901234567890";
+            
+            let cross_chain_id = utils::generate_cross_chain_id(
+                eth_address,
+                RECIPIENT,
+                TEST_AMOUNT,
+                12345
+            );
+
+            escrow::create_escrow(
+                coin,
+                RECIPIENT,
+                RESOLVER,
+                hash,
+                TEST_DURATION,
+                cross_chain_id,
+                &clock,
+                scenario.ctx()
+            );
+        };
+
+        // 3. Resolver claims escrow
+        scenario.next_tx(RESOLVER);
+        {
+            let mut escrow = scenario.take_shared<Escrow<SUI>>();
+            
+            let claimed_coin = escrow::claim_with_secret(
+                &mut escrow,
+                SECRET,
+                &clock,
+                scenario.ctx()
+            );
+
+            assert!(coin::value(&claimed_coin) == TEST_AMOUNT, 0);
+            coin::burn_for_testing(claimed_coin);
+            
+            scenario.return_shared(escrow);
+        };
+
+        // 4. Update resolver stats
+        scenario.next_tx(ADMIN);
+        {
+            let mut registry = scenario.take_shared<ResolverRegistry>();
+            
+            resolver::update_resolver_stats(
+                &mut registry,
+                RESOLVER,
+                TEST_AMOUNT,
+                true,
+                clock.timestamp_ms(&clock),
+                scenario.ctx()
+            );
+
+            let (_, _, reputation, volume) = resolver::get_resolver_info(&registry, RESOLVER);
+            assert!(volume == TEST_AMOUNT, 1);
+            assert!(reputation == 100, 2); // Perfect success rate
+            
+            scenario.return_shared(registry);
+        };
+
+        clock.destroy_for_testing();
+        scenario.end();
+    }
+}

@@ -1,0 +1,232 @@
+{
+  "designSystem": {
+    "name": "Manteia Design System",
+    "version": "1.0.0",
+    "description": "A modern, clean design system with dark mode support based on Tailwind CSS and Geist fonts",
+    "framework": {
+      "name": "Next.js",
+      "version": "14.1.0"
+    },
+    "cssFramework": {
+      "name": "Tailwind CSS",
+      "version": "3.4.1",
+      "plugins": [
+        "tw-animate-css"
+      ]
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "sans": "Geist Sans",
+      "mono": "Geist Mono"
+    },
+    "fontImport": "import { GeistSans } from \"geist/font/sans\"; import { GeistMono } from \"geist/font/mono\";",
+    "fontUsage": "${GeistSans.variable} ${GeistMono.variable}",
+    "fontSizes": {
+      "xs": "0.75rem",
+      "sm": "0.875rem",
+      "base": "1rem",
+      "lg": "1.125rem",
+      "xl": "1.25rem",
+      "2xl": "1.5rem",
+      "3xl": "1.875rem",
+      "4xl": "2.25rem"
+    }
+  },
+  "colorSystem": {
+    "colorFormat": "oklch",
+    "lightMode": {
+      "background": "100% 0% 0%",
+      "foreground": "14.1% 0.5% 285.823",
+      "card": "100% 0% 0%",
+      "cardForeground": "14.1% 0.5% 285.823",
+      "popover": "100% 0% 0%",
+      "popoverForeground": "14.1% 0.5% 285.823",
+      "primary": "58.5% 23.3% 277.117",
+      "primaryTo": "51.1% 26.2% 276.966",
+      "primaryForeground": "96.2% 1.8% 272.314",
+      "secondary": "96.7% 0.1% 286.375",
+      "secondaryForeground": "18.3% 0.6% 285.79",
+      "muted": "96.7% 0.1% 286.375",
+      "mutedForeground": "55.2% 1.6% 285.938",
+      "accent": "96.7% 0.1% 286.375",
+      "accentForeground": "18.3% 0.6% 285.79",
+      "destructive": "63.7% 23.7% 25.331",
+      "destructiveForeground": "63.7% 23.7% 25.331",
+      "border": "92% 0.4% 286.32",
+      "input": "87.1% 0.6% 286.286",
+      "ring": "87.1% 0.6% 286.286",
+      "sidebar": "95.6% 0.2% 286.35",
+      "sidebarForeground": "37% 1.3% 285.805",
+      "sidebarPrimary": "67.3% 18.2% 276.935",
+      "sidebarPrimaryForeground": "98.5% 0% 0%"
+    },
+    "darkMode": {
+      "background": "18.3% 0.6% 285.79",
+      "foreground": "98.5% 0% 0%",
+      "card": "37% 1.3% 285.805",
+      "cardForeground": "98.5% 0% 0%",
+      "popover": "27.4% 0.6% 286.033",
+      "popoverForeground": "98.5% 0% 0%",
+      "primary": "58.5% 23.3% 277.117",
+      "primaryTo": "51.1% 26.2% 276.966",
+      "primaryForeground": "96.2% 1.8% 272.314",
+      "secondary": "27.4% 0.6% 286.033",
+      "secondaryForeground": "98.5% 0% 0%",
+      "muted": "21% 0.6% 285.885",
+      "mutedForeground": "70.5% 1.5% 286.067",
+      "accent": "21% 0.6% 285.885",
+      "accentForeground": "98.5% 0% 0%",
+      "destructive": "63.7% 23.7% 25.331",
+      "destructiveForeground": "63.7% 23.7% 25.331",
+      "border": "24.6% 0.9% 285.69",
+      "input": "24.6% 0.9% 285.69",
+      "ring": "44.2% 1.7% 285.786",
+      "sidebar": "21% 0.6% 285.885",
+      "sidebarForeground": "96.7% 0.1% 286.375",
+      "sidebarPrimary": "67.3% 18.2% 276.935",
+      "sidebarPrimaryForeground": "100% 0% 0%"
+    },
+    "charts": {
+      "chart1": "58.5% 23.3% 277.117",
+      "chart2": "60% 11.8% 184.704",
+      "chart3": "39.8% 7% 227.392",
+      "chart4": "82.8% 18.9% 84.429",
+      "chart5": "76.9% 18.8% 70.08"
+    }
+  },
+  "spacing": {
+    "radius": {
+      "default": "0.625rem",
+      "sm": "calc(var(--radius) - 4px)",
+      "md": "calc(var(--radius) - 2px)",
+      "lg": "var(--radius)",
+      "xl": "calc(var(--radius) + 4px)"
+    }
+  },
+  "shadows": {
+    "xs": "0 1px 1px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.05)",
+    "sm": "0 1px 1px rgba(0, 0, 0, 0.03), 0 2px 2px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.03)",
+    "md": "0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 2px rgba(0, 0, 0, 0.02), 0 4px 4px rgba(0, 0, 0, 0.02), 0 8px 8px rgba(0, 0, 0, 0.02)",
+    "lg": "0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 2px rgba(0, 0, 0, 0.02), 0 4px 4px rgba(0, 0, 0, 0.02), 0 8px 8px rgba(0, 0, 0, 0.02), 0 16px 16px rgba(0, 0, 0, 0.02)",
+    "xl": "0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 2px rgba(0, 0, 0, 0.02), 0 4px 4px rgba(0, 0, 0, 0.02), 0 8px 8px rgba(0, 0, 0, 0.02), 0 16px 16px rgba(0, 0, 0, 0.02), 0 32px 32px rgba(0, 0, 0, 0.02)",
+    "2xl": "0 1px 1px rgba(0, 0, 0, 0.02), 0 2px 2px rgba(0, 0, 0, 0.02), 0 4px 4px rgba(0, 0, 0, 0.02), 0 8px 8px rgba(0, 0, 0, 0.02), 0 16px 16px rgba(0, 0, 0, 0.02), 0 32px 32px rgba(0, 0, 0, 0.02), 0 64px 64px rgba(0, 0, 0, 0.02)"
+  },
+  "animations": {
+    "accordionDown": "accordion-down 0.2s ease-out",
+    "accordionUp": "accordion-up 0.2s ease-out"
+  },
+  "components": {
+    "sidebar": {
+      "width": "16rem",
+      "widthMobile": "18rem",
+      "widthIcon": "3rem",
+      "variants": ["sidebar", "floating", "inset"],
+      "collapsible": ["offcanvas", "icon", "none"],
+      "structure": {
+        "header": "flex flex-col gap-2 p-2",
+        "content": "flex min-h-0 flex-1 flex-col gap-2 overflow-auto",
+        "footer": "flex flex-col gap-2 p-2",
+        "group": "relative flex w-full min-w-0 flex-col p-2",
+        "menu": "flex w-full min-w-0 flex-col gap-1",
+        "menuItem": "group/menu-item relative"
+      }
+    },
+    "button": {
+      "base": "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "variants": {
+        "default": "bg-primary text-primary-foreground hover:bg-primary/90",
+        "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        "outline": "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        "ghost": "hover:bg-accent hover:text-accent-foreground",
+        "link": "text-primary underline-offset-4 hover:underline"
+      },
+      "sizes": {
+        "default": "h-10 px-4 py-2",
+        "sm": "h-9 rounded-md px-3",
+        "lg": "h-11 rounded-md px-8",
+        "icon": "h-10 w-10"
+      }
+    },
+    "input": {
+      "base": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "themeToggle": {
+      "button": "text-muted-foreground hover:text-foreground/80 rounded peer-focus-visible:border-ring peer-focus-visible:ring-ring/50 relative inline-flex size-8 cursor-pointer items-center justify-center transition-[color,box-shadow] outline-none peer-focus-visible:ring-[3px]"
+    }
+  },
+  "layout": {
+    "pageStructure": {
+      "wrapper": "flex h-svh",
+      "mainContent": "overflow-auto px-4 md:px-6 lg:px-8",
+      "header": "bg-sidebar/90 backdrop-blur-sm sticky top-0 z-50 -mx-2 px-2",
+      "headerContent": "flex shrink-0 items-center gap-2 border-b py-4 w-full max-w-7xl mx-auto",
+      "contentWrapper": "flex max-lg:flex-col flex-1 gap-6 py-6 w-full max-w-7xl mx-auto"
+    }
+  },
+  "utilityClasses": {
+    "commonPatterns": [
+      "flex h-svh",
+      "flex flex-col",
+      "flex items-center",
+      "flex justify-center",
+      "gap-2",
+      "gap-4",
+      "gap-6",
+      "p-2",
+      "p-4",
+      "px-2",
+      "py-4",
+      "mx-auto",
+      "w-full",
+      "max-w-7xl",
+      "rounded-md",
+      "rounded-lg",
+      "border",
+      "border-b",
+      "shadow-sm",
+      "bg-background",
+      "text-foreground",
+      "bg-sidebar",
+      "text-sidebar-foreground",
+      "text-muted-foreground",
+      "hover:bg-accent",
+      "hover:text-accent-foreground",
+      "transition-colors",
+      "focus-visible:outline-none",
+      "focus-visible:ring-2",
+      "focus-visible:ring-ring",
+      "disabled:opacity-50"
+    ]
+  },
+  "responsiveDesign": {
+    "breakpoints": {
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px",
+      "2xl": "1536px"
+    },
+    "patterns": {
+      "mobileFirst": "Use mobile-first approach with responsive classes like md:flex lg:grid",
+      "sidebarCollapsing": "Sidebar collapses to icon-only or off-canvas on smaller screens",
+      "stackingOnMobile": "Use flex-col on mobile and row on larger screens"
+    }
+  },
+  "accessibility": {
+    "patterns": [
+      "Use aria-label for buttons without visible text",
+      "Include sr-only text for icon-only buttons",
+      "Use aria-hidden=\"true\" for decorative icons",
+      "Ensure proper focus styles with focus-visible:ring-2",
+      "Maintain color contrast ratios between foreground and background colors"
+    ]
+  },
+  "darkMode": {
+    "implementation": "Uses next-themes with class strategy",
+    "toggle": "Smart toggle between light, dark, and system preference",
+    "mediaQuery": "(prefers-color-scheme: dark)",
+    "classPattern": "dark:bg-card dark:text-foreground"
+  }
+}
