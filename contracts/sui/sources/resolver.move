@@ -16,14 +16,14 @@ module manteia::resolver {
     const MAX_FEE_BPS: u64 = 1000; // 10% max fee
 
     // Resolver registry
-    struct ResolverRegistry has key {
+    public struct ResolverRegistry has key {
         id: UID,
         resolvers: Table<address, ResolverInfo>,
         admin: address,
         total_resolvers: u64,
     }
 
-    struct ResolverInfo has store {
+    public struct ResolverInfo has store {
         name: vector<u8>,
         fee_bps: u64, // Basis points (100 = 1%)
         is_active: bool,
@@ -35,19 +35,19 @@ module manteia::resolver {
     }
 
     // Events
-    struct ResolverRegistered has copy, drop {
+    public struct ResolverRegistered has copy, drop {
         resolver: address,
         name: vector<u8>,
         fee_bps: u64,
     }
 
-    struct ResolverUpdated has copy, drop {
+    public struct ResolverUpdated has copy, drop {
         resolver: address,
         is_active: bool,
         fee_bps: u64,
     }
 
-    struct ResolverStatsUpdated has copy, drop {
+    public struct ResolverStatsUpdated has copy, drop {
         resolver: address,
         total_volume: u64,
         successful_swaps: u64,

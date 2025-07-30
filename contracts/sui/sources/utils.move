@@ -20,7 +20,7 @@ module manteia::utils {
         amount: u64,
         nonce: u64
     ): vector<u8> {
-        let data = vector::empty<u8>();
+        let mut data = vector::empty<u8>();
         vector::append(&mut data, bcs::to_bytes(&sender));
         vector::append(&mut data, bcs::to_bytes(&recipient));
         vector::append(&mut data, bcs::to_bytes(&amount));
@@ -38,7 +38,7 @@ module manteia::utils {
     ): vector<u8> {
         assert!(vector::length(&eth_address) == 20, EInvalidAddressLength); // Ethereum address is 20 bytes
 
-        let data = vector::empty<u8>();
+        let mut data = vector::empty<u8>();
         vector::append(&mut data, eth_address);
         vector::append(&mut data, bcs::to_bytes(&sui_address));
         vector::append(&mut data, bcs::to_bytes(&amount));
@@ -93,7 +93,7 @@ module manteia::utils {
         part_index: u64,
         total_parts: u64
     ): vector<u8> {
-        let data = vector::empty<u8>();
+        let mut data = vector::empty<u8>();
         vector::append(&mut data, parent_hash);
         vector::append(&mut data, bcs::to_bytes(&part_index));
         vector::append(&mut data, bcs::to_bytes(&total_parts));
@@ -112,7 +112,7 @@ module manteia::utils {
         amount: u64,
         recipient: address
     ): vector<u8> {
-        let data = vector::empty<u8>();
+        let mut data = vector::empty<u8>();
         vector::append(&mut data, secret);
         vector::append(&mut data, bcs::to_bytes(&amount));
         vector::append(&mut data, bcs::to_bytes(&recipient));
@@ -126,13 +126,13 @@ module manteia::utils {
         root: vector<u8>,
         proof: vector<vector<u8>>
     ): bool {
-        let current_hash = leaf;
-        let i = 0;
+        let mut current_hash = leaf;
+        let mut i = 0;
         let proof_length = vector::length(&proof);
 
         while (i < proof_length) {
             let proof_element = *vector::borrow(&proof, i);
-            let data = vector::empty<u8>();
+            let mut data = vector::empty<u8>();
 
             // Determine order for hashing (smaller hash goes first)
             if (compare_bytes(&current_hash, &proof_element)) {
@@ -156,7 +156,7 @@ module manteia::utils {
         let b_len = vector::length(b);
         let min_len = if (a_len < b_len) a_len else b_len;
 
-        let i = 0;
+        let mut i = 0;
         while (i < min_len) {
             let a_byte = *vector::borrow(a, i);
             let b_byte = *vector::borrow(b, i);
@@ -174,15 +174,15 @@ module manteia::utils {
 
     // Generate nonce for unique order identification
     public fun generate_nonce(ctx_bytes: vector<u8>, timestamp: u64): u64 {
-        let data = vector::empty<u8>();
+        let mut data = vector::empty<u8>();
         vector::append(&mut data, ctx_bytes);
         vector::append(&mut data, bcs::to_bytes(&timestamp));
 
         let hash_bytes = hash::sha3_256(data);
-        let nonce_bytes = vector::empty<u8>();
+        let mut nonce_bytes = vector::empty<u8>();
 
         // Take first 8 bytes for u64 nonce
-        let i = 0;
+        let mut i = 0;
         while (i < 8 && i < vector::length(&hash_bytes)) {
             vector::push_back(&mut nonce_bytes, *vector::borrow(&hash_bytes, i));
             i = i + 1;
@@ -190,8 +190,8 @@ module manteia::utils {
 
         // Convert bytes to u64 (simplified)
         if (vector::length(&nonce_bytes) == 8) {
-            let result = 0u64;
-            let j = 0;
+            let mut result = 0u64;
+            let mut j = 0;
             while (j < 8) {
                 let byte_val = (*vector::borrow(&nonce_bytes, j) as u64);
                 result = result + (byte_val << (((7 - j) * 8) as u8));

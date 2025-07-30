@@ -59,7 +59,7 @@ module manteia::batch_escrow {
 
     // Create multiple escrows for partial fills
     public fun create_batch_escrow<T>(
-        coins: vector<Coin<T>>,
+        mut coins: vector<Coin<T>>,
         recipients: vector<address>,
         resolvers: vector<address>,
         amounts: vector<u64>,
@@ -79,7 +79,7 @@ module manteia::batch_escrow {
         );
 
         let creator = sui::tx_context::sender(ctx);
-        let batch = BatchEscrow {
+        let mut batch = BatchEscrow {
             id: sui::object::new(ctx),
             escrow_ids: table::new(ctx),
             parent_hash,
@@ -92,22 +92,22 @@ module manteia::batch_escrow {
         };
 
         let batch_id = sui::object::id(&batch);
-        let i = 0;
+        let mut i = 0;
 
         while (i < total_parts) {
-            let coin = vector::pop_back(&coins);
+            let coin = vector::pop_back(&mut coins);
             let recipient = *vector::borrow(&recipients, i);
             let resolver = *vector::borrow(&resolvers, i);
             let amount = *vector::borrow(&amounts, i);
 
             // Verify coin amount matches expected amount
-            assert!(sui::coin::value(&coin) == amount, EInvalidBatchSize);
+            assert!(sui::coin::value<T>(&coin) == amount, EInvalidBatchSize);
 
             // Generate unique hash for this part
             let part_hash = utils::generate_partial_hash(parent_hash, i, total_parts);
 
             // Create individual escrow
-            escrow::create_escrow(
+            escrow::create_escrow<T>(
                 coin,
                 recipient,
                 resolver,
@@ -164,7 +164,7 @@ module manteia::batch_escrow {
 
         if (table::contains(&batch.escrow_ids, part_index)) {
             let escrow_id = *table::borrow(&batch.escrow_ids, part_index);
-            
+
             batch.claimed_parts = batch.claimed_parts + 1;
 
             // Emit event
@@ -179,7 +179,7 @@ module manteia::batch_escrow {
             // Check if batch is completed
             if (batch.claimed_parts == batch.total_parts) {
                 batch.is_completed = true;
-                
+
                 event::emit(BatchCompleted {
                     batch_id: sui::object::id(batch),
                     total_claimed: batch.claimed_parts,

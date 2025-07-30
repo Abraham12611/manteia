@@ -23,7 +23,7 @@ module manteia::escrow {
     const HASH_LENGTH: u64 = 32;
 
     // Escrow object for holding locked funds
-    struct Escrow<phantom T> has key, store {
+    public struct Escrow<phantom T> has key, store {
         id: UID,
         sender: address,
         recipient: address,
@@ -37,7 +37,7 @@ module manteia::escrow {
     }
 
     // Events for indexing
-    struct EscrowCreated has copy, drop {
+    public struct EscrowCreated has copy, drop {
         escrow_id: ID,
         sender: address,
         recipient: address,
@@ -48,14 +48,14 @@ module manteia::escrow {
         cross_chain_id: vector<u8>,
     }
 
-    struct EscrowClaimed has copy, drop {
+    public struct EscrowClaimed has copy, drop {
         escrow_id: ID,
         claimer: address,
         secret: vector<u8>,
         amount: u64,
     }
 
-    struct EscrowCancelled has copy, drop {
+    public struct EscrowCancelled has copy, drop {
         escrow_id: ID,
         refund_to: address,
         amount: u64,
