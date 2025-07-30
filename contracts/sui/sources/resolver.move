@@ -1,10 +1,9 @@
 module manteia::resolver {
-    use sui::object::{Self, UID, ID};
+    use sui::object::{UID};
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::table::{Self, Table};
     use sui::event;
-    use std::vector;
 
     // Error codes
     const ENotAdmin: u64 = 0;
@@ -58,7 +57,7 @@ module manteia::resolver {
     // Initialize registry (one-time)
     fun init(ctx: &mut TxContext) {
         let registry = ResolverRegistry {
-            id: object::new(ctx),
+            id: sui::object::new(ctx),
             resolvers: table::new(ctx),
             admin: tx_context::sender(ctx),
             total_resolvers: 0,

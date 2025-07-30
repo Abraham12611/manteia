@@ -143,7 +143,7 @@ module manteia::utils {
                 vector::append(&mut data, current_hash);
             };
 
-            current_hash = hash::sha3_256(&data);
+            current_hash = hash::sha3_256(data);
             i = i + 1;
         };
 
@@ -178,7 +178,7 @@ module manteia::utils {
         vector::append(&mut data, ctx_bytes);
         vector::append(&mut data, bcs::to_bytes(&timestamp));
 
-        let hash_bytes = hash::sha3_256(&data);
+        let hash_bytes = hash::sha3_256(data);
         let nonce_bytes = vector::empty<u8>();
 
         // Take first 8 bytes for u64 nonce

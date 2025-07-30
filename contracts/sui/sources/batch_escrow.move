@@ -140,7 +140,7 @@ module manteia::batch_escrow {
 
     // Register escrow ID for a specific part (called after escrow creation)
     public fun register_escrow_part(
-        batch: &BatchEscrow,
+        batch: &mut BatchEscrow,
         part_index: u64,
         escrow_id: ID,
         _ctx: &mut TxContext
@@ -148,12 +148,12 @@ module manteia::batch_escrow {
         assert!(part_index < batch.total_parts, EInvalidPartIndex);
         assert!(!table::contains(&batch.escrow_ids, part_index), EPartAlreadyClaimed);
 
-        table::add(&batch.escrow_ids, part_index, escrow_id);
+        table::add(&mut batch.escrow_ids, part_index, escrow_id);
     }
 
-    // Mark a part as claimed (called when individual escrow is claimed)
+        // Mark a part as claimed (called when individual escrow is claimed)
     public fun mark_part_claimed(
-        batch: &BatchEscrow,
+        batch: &mut BatchEscrow,
         part_index: u64,
         claimer: address,
         amount: u64,
@@ -221,7 +221,7 @@ module manteia::batch_escrow {
 
     // Check if specific part is claimed
     public fun is_part_claimed(batch: &BatchEscrow, part_index: u64): bool {
-        part_index < batch.total_parts && 
+        part_index < batch.total_parts &&
         table::contains(&batch.escrow_ids, part_index)
     }
 

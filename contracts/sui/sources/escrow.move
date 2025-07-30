@@ -1,7 +1,7 @@
 module manteia::escrow {
     use sui::object::{UID, ID};
     use sui::transfer;
-    use sui::tx_context::TxContext;
+    use sui::tx_context::{Self, TxContext};
     use sui::coin::{Self, Coin};
     use sui::clock::{Self, Clock};
     use sui::event;
