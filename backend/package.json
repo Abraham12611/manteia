@@ -1,0 +1,39 @@
+{
+  "name": "manteia-backend",
+  "version": "1.0.0",
+  "description": "Manteia Cross-Chain DEX Backend",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test",
+    "lint": "eslint src/**/*.js"
+  },
+  "dependencies": {
+    "@1inch/cross-chain-sdk": "^1.0.0",
+    "@1inch/fusion-sdk": "^1.0.0",
+    "@1inch/limit-order-protocol": "^4.0.0",
+    "@mysten/sui.js": "^0.50.0",
+    "ethers": "^6.8.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "axios": "^1.6.0",
+    "ws": "^8.14.2",
+    "redis": "^4.6.0",
+    "node-cron": "^3.0.3",
+    "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.2",
+    "rate-limiter-flexible": "^3.0.8"
+  },
+  "devDependencies": {
+    "eslint": "^8.54.0",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
