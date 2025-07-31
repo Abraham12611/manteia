@@ -116,9 +116,11 @@ export default function HomePage() {
                 <Separator />
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <Button className="flex-1" size="lg">
-                    <ArrowUpDown className="h-4 w-4 mr-2" />
-                    Start Trading
+                  <Button className="flex-1" size="lg" asChild>
+                    <a href="/swap">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      Start Trading
+                    </a>
                   </Button>
                   <Button variant="outline" size="lg" className="flex-1">
                     Learn More
