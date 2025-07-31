@@ -1,8 +1,9 @@
-import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
+import { SuiClient, getFullnodeUrl, SuiHTTPTransport } from '@mysten/sui.js/client';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { fromB64 } from '@mysten/sui.js/utils';
 import crypto from 'crypto';
+import ws from 'ws';
 
 export class SuiService {
   constructor({ rpcUrl, privateKey, packageId, logger }) {
@@ -10,7 +11,7 @@ export class SuiService {
     this.packageId = packageId;
     this.logger = logger;
 
-    // Initialize Sui client
+    // Initialize Sui client (WebSocket will be handled separately due to endpoint limitations)
     this.client = new SuiClient({ url: this.rpcUrl });
 
     // Initialize keypair if private key is provided
@@ -377,15 +378,37 @@ export class SuiService {
   // Event Monitoring
   async subscribeToEscrowEvents(callback) {
     try {
-      this.logger.info('Subscribing to Sui escrow events');
+      this.logger.info('Starting Sui escrow event monitoring with polling (WebSocket not supported by endpoint)');
 
-      // Subscribe to events from our package
-      const subscription = await this.client.subscribeEvent({
-        filter: {
-          Package: this.packageId
-        },
-        onMessage: (event) => {
-          try {
+      // Use polling-based event monitoring directly since WebSocket subscription
+      // is not supported by the Sui testnet endpoint
+      return this.startEventPolling(callback);
+    } catch (error) {
+      this.logger.error('Error starting Sui event monitoring:', error);
+      throw error;
+    }
+  }
+
+  // Polling-based event monitoring as fallback
+  startEventPolling(callback) {
+    this.logger.info('Starting polling-based event monitoring');
+
+    let lastEventTimestamp = Date.now();
+
+    const pollEvents = async () => {
+      try {
+        // Query events from the last timestamp
+        const events = await this.client.queryEvents({
+          query: { Package: this.packageId },
+          cursor: null,
+          limit: 50,
+          order: 'ascending'
+        });
+
+        // Process new events
+        for (const event of events.data) {
+          const eventTimestamp = parseInt(event.timestampMs);
+          if (eventTimestamp > lastEventTimestamp) {
             const eventType = event.type.split('::').pop();
 
             switch (eventType) {
@@ -401,17 +424,25 @@ export class SuiService {
               default:
                 this.logger.debug('Unknown event type:', eventType);
             }
-          } catch (error) {
-            this.logger.error('Error processing Sui event:', error);
+
+            lastEventTimestamp = eventTimestamp;
           }
         }
-      });
+      } catch (error) {
+        this.logger.error('Error polling events:', error);
+      }
+    };
 
-      return subscription;
-    } catch (error) {
-      this.logger.error('Error subscribing to Sui events:', error);
-      throw error;
-    }
+    // Poll every 5 seconds
+    const interval = setInterval(pollEvents, 5000);
+
+    // Return a subscription-like object
+    return {
+      unsubscribe: () => {
+        clearInterval(interval);
+        this.logger.info('Event polling stopped');
+      }
+    };
   }
 
   handleEscrowCreated(event, callback) {

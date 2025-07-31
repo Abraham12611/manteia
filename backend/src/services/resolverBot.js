@@ -92,15 +92,23 @@ export class ResolverBot extends EventEmitter {
   }
 
   async startMonitoring() {
-    // Monitor Sui escrow events
-    await this.suiService.subscribeToEscrowEvents((event) => {
-      this.handleSuiEvent(event);
-    });
+    try {
+      // Monitor Sui escrow events
+      await this.suiService.subscribeToEscrowEvents((event) => {
+        this.handleSuiEvent(event);
+      });
+    } catch (error) {
+      this.logger.error('Failed to start Sui event monitoring:', error.message);
+    }
 
-    // Monitor 1inch Fusion+ orders
-    await this.oneInchService.subscribeToOrders((orders) => {
-      this.handleFusionOrders(orders);
-    });
+    try {
+      // Monitor 1inch Fusion+ orders
+      await this.oneInchService.subscribeToOrders((orders) => {
+        this.handleFusionOrders(orders);
+      });
+    } catch (error) {
+      this.logger.error('Failed to start 1inch order monitoring:', error.message);
+    }
 
     this.logger.info('Started monitoring both chains for swap opportunities');
   }
