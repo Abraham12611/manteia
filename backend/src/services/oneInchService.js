@@ -1,18 +1,30 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
-// Import as default export due to CommonJS compatibility
-import CrossChainSDKPackage from '@1inch/cross-chain-sdk';
+// Use dynamic import to handle module compatibility
+let CrossChainSDK, HashLock, NetworkEnum, PresetEnum, OrderStatus, PrivateKeyProviderConnector, WebSocketApi;
 
-// Destructure the needed components
-const {
-  SDK: CrossChainSDK,
-  HashLock,
-  NetworkEnum,
-  PresetEnum,
-  OrderStatus,
-  PrivateKeyProviderConnector,
-  WebSocketApi
-} = CrossChainSDKPackage;
+// Initialize SDK components
+const initializeSDK = async () => {
+  try {
+    const sdkModule = await import('@1inch/cross-chain-sdk');
+
+    // Extract components - handle both default and named exports
+    const sdk = sdkModule.default || sdkModule;
+
+    CrossChainSDK = sdk.SDK || sdkModule.SDK;
+    HashLock = sdk.HashLock || sdkModule.HashLock;
+    NetworkEnum = sdk.NetworkEnum || sdkModule.NetworkEnum;
+    PresetEnum = sdk.PresetEnum || sdkModule.PresetEnum;
+    OrderStatus = sdk.OrderStatus || sdkModule.OrderStatus;
+    PrivateKeyProviderConnector = sdk.PrivateKeyProviderConnector || sdkModule.PrivateKeyProviderConnector;
+    WebSocketApi = sdk.WebSocketApi || sdkModule.WebSocketApi;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize 1inch SDK:', error);
+    return false;
+  }
+};
 import { randomBytes } from 'crypto';
 
 export class OneInchService {
@@ -20,6 +32,7 @@ export class OneInchService {
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
     this.logger = logger;
+    this.sdkInitialized = false;
 
     // Create axios instance for classic/fusion operations
     this.client = axios.create({
@@ -35,23 +48,47 @@ export class OneInchService {
     this.crossChainSDK = null;
     this.websocketApi = null;
 
-    // Supported chains mapping
-    this.supportedChains = {
-      1: NetworkEnum.ETHEREUM,
-      137: NetworkEnum.POLYGON,
-      56: NetworkEnum.BINANCE,
-      42161: NetworkEnum.ARBITRUM,
-      10: NetworkEnum.OPTIMISM,
-      43114: NetworkEnum.AVALANCHE,
-      8453: NetworkEnum.BASE
-    };
+    // Initialize SDK components asynchronously
+    this.initializeSDKComponents();
+  }
 
-    this.logger.info('1inch service initialized');
+  async initializeSDKComponents() {
+    const success = await initializeSDK();
+    if (success) {
+      this.sdkInitialized = true;
+
+      // Supported chains mapping (now available after SDK init)
+      this.supportedChains = {
+        1: NetworkEnum.ETHEREUM,
+        137: NetworkEnum.POLYGON,
+        56: NetworkEnum.BINANCE,
+        42161: NetworkEnum.ARBITRUM,
+        10: NetworkEnum.OPTIMISM,
+        43114: NetworkEnum.AVALANCHE,
+        8453: NetworkEnum.BASE
+      };
+
+      this.logger.info('1inch SDK initialized successfully');
+    } else {
+      this.logger.error('Failed to initialize 1inch SDK');
+    }
+  }
+
+  // Helper method to ensure SDK is ready
+  async ensureSDKReady() {
+    if (!this.sdkInitialized) {
+      await this.initializeSDKComponents();
+    }
+    if (!this.sdkInitialized) {
+      throw new Error('1inch SDK not available');
+    }
   }
 
   // Initialize cross-chain SDK with blockchain provider
-  initializeCrossChainSDK(privateKey, web3Provider) {
+  async initializeCrossChainSDK(privateKey, web3Provider) {
     try {
+      await this.ensureSDKReady();
+
       const blockchainProvider = new PrivateKeyProviderConnector(privateKey, web3Provider);
 
       this.crossChainSDK = new CrossChainSDK({
