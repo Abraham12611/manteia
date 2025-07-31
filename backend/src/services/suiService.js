@@ -15,7 +15,14 @@ export class SuiService {
 
     // Initialize keypair if private key is provided
     if (privateKey) {
-      this.keypair = Ed25519Keypair.fromSecretKey(fromB64(privateKey));
+      // Handle both formats: Sui wallet format (suiprivkey1...) and raw base64
+      if (privateKey.startsWith('suiprivkey1')) {
+        // Sui wallet format - decode using built-in method
+        this.keypair = Ed25519Keypair.fromSecretKey(privateKey);
+      } else {
+        // Assume base64 format
+        this.keypair = Ed25519Keypair.fromSecretKey(fromB64(privateKey));
+      }
       this.address = this.keypair.getPublicKey().toSuiAddress();
     }
 
