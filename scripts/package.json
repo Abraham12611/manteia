@@ -1,0 +1,17 @@
+{
+  "name": "manteia-setup-scripts",
+  "version": "1.0.0",
+  "description": "Setup scripts for Manteia development environment",
+  "main": "generate-ethereum-key.js",
+  "scripts": {
+    "generate-eth-key": "node generate-ethereum-key.js",
+    "deploy-sui": "./deploy-sui-contracts.sh",
+    "setup": "./setup-environment.sh"
+  },
+  "dependencies": {
+    "ethers": "^6.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
