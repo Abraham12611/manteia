@@ -11,9 +11,9 @@
     "lint": "eslint src/**/*.js"
   },
   "dependencies": {
-    "@1inch/cross-chain-sdk": "^1.0.0",
-    "@1inch/fusion-sdk": "^1.0.0",
-    "@1inch/limit-order-protocol": "^4.0.0",
+    "@1inch/cross-chain-sdk": "latest",
+    "@1inch/fusion-sdk": "latest",
+    "@1inch/limit-order-protocol": "latest",
     "@mysten/sui.js": "^0.50.0",
     "ethers": "^6.8.0",
     "web3": "^4.0.0",
@@ -28,7 +28,7 @@
     "node-cron": "^3.0.3",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
-    "rate-limiter-flexible": "^3.0.8"
+    "rate-limiter-flexible": "latest"
   },
   "devDependencies": {
     "eslint": "^8.54.0",
