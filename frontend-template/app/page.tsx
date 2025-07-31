@@ -34,9 +34,15 @@ export default function HomePage() {
   useEffect(() => {
     const checkBackendHealth = async () => {
       setIsCheckingHealth(true);
-      const { data } = await checkHealth();
+      const { data, error } = await checkHealth();
       if (data) {
         setBackendStatus(data);
+      } else if (error) {
+        // Show error state - backend is unreachable
+        setBackendStatus({
+          status: "error",
+          services: { sui: false, ethereum: false, oneInch: false }
+        });
       }
       setIsCheckingHealth(false);
     };
@@ -193,8 +199,16 @@ export default function HomePage() {
                     size="sm"
                     onClick={async () => {
                       setIsCheckingHealth(true);
-                      const { data } = await checkHealth();
-                      if (data) setBackendStatus(data);
+                      const { data, error } = await checkHealth();
+                      if (data) {
+                        setBackendStatus(data);
+                      } else if (error) {
+                        // Show error state - backend is unreachable
+                        setBackendStatus({
+                          status: "error",
+                          services: { sui: false, ethereum: false, oneInch: false }
+                        });
+                      }
                       setIsCheckingHealth(false);
                     }}
                     disabled={isCheckingHealth}
@@ -224,19 +238,19 @@ export default function HomePage() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Sui Network</span>
                         <div className={`h-2 w-2 rounded-full ${
-                          backendStatus.services.sui ? "bg-green-500" : "bg-red-500"
+                          backendStatus?.services?.sui ? "bg-green-500" : "bg-red-500"
                         }`} />
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Ethereum Network</span>
                         <div className={`h-2 w-2 rounded-full ${
-                          backendStatus.services.ethereum ? "bg-green-500" : "bg-red-500"
+                          backendStatus?.services?.ethereum ? "bg-green-500" : "bg-red-500"
                         }`} />
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">1inch Integration</span>
                         <div className={`h-2 w-2 rounded-full ${
-                          backendStatus.services.oneInch ? "bg-green-500" : "bg-red-500"
+                          backendStatus?.services?.oneInch ? "bg-green-500" : "bg-red-500"
                         }`} />
                       </div>
                     </div>
