@@ -1,6 +1,7 @@
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "../providers/theme-provider";
+import { ManteiaWalletProvider } from "../providers/manteia-wallet-provider";
 import "./globals.css";
 
 export default function RootLayout({
@@ -19,7 +20,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <ManteiaWalletProvider>
+            {children}
+          </ManteiaWalletProvider>
         </ThemeProvider>
       </body>
     </html>
