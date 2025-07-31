@@ -96,12 +96,12 @@ class ManteiaServer {
       try {
         const Web3 = (await import('web3')).default;
         const web3Provider = new Web3(process.env.ETH_RPC_URL);
-        
+
         const success = this.services.oneInch.initializeCrossChainSDK(
           process.env.RESOLVER_PRIVATE_KEY,
           web3Provider
         );
-        
+
         if (success) {
           // Setup WebSocket event handlers
           this.services.oneInch.setupWebSocketSubscriptions({

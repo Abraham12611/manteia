@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { 
-  SDK as CrossChainSDK, 
-  HashLock, 
-  NetworkEnum, 
-  PresetEnum, 
+import {
+  SDK as CrossChainSDK,
+  HashLock,
+  NetworkEnum,
+  PresetEnum,
   OrderStatus,
   PrivateKeyProviderConnector,
   WebSocketApi
@@ -49,7 +49,7 @@ export class OneInchService {
   initializeCrossChainSDK(privateKey, web3Provider) {
     try {
       const blockchainProvider = new PrivateKeyProviderConnector(privateKey, web3Provider);
-      
+
       this.crossChainSDK = new CrossChainSDK({
         url: 'https://api.1inch.dev/fusion-plus',
         authKey: this.apiKey,
@@ -117,7 +117,7 @@ export class OneInchService {
 
       // Generate secrets for the order
       const secretsCount = quote.presets[preset].secretsCount;
-      const secrets = Array.from({ length: secretsCount }).map(() => 
+      const secrets = Array.from({ length: secretsCount }).map(() =>
         '0x' + randomBytes(32).toString('hex')
       );
 
@@ -217,7 +217,7 @@ export class OneInchService {
       }
 
       await this.crossChainSDK.submitSecret(orderHash, secret);
-      
+
       this.logger.info('Secret submitted for order', { orderHash });
       return true;
     } catch (error) {
@@ -517,7 +517,7 @@ export class OneInchService {
       // Subscribe to all order events
       this.websocketApi.order.onOrder((data) => {
         this.logger.debug('Received order event', { type: data.event });
-        
+
         switch (data.event) {
           case 'order_created':
             if (eventHandlers.onOrderCreated) {
@@ -585,7 +585,7 @@ export class OneInchService {
       if (!this.websocketApi) {
         // Fallback to polling if WebSocket not available
         this.logger.info('WebSocket not available, falling back to polling');
-        
+
         setInterval(async () => {
           try {
             const orders = await this.getActiveOrders();
@@ -594,7 +594,7 @@ export class OneInchService {
             this.logger.error('Error in order polling:', error);
           }
         }, 5000);
-        
+
         return;
       }
 
@@ -660,13 +660,13 @@ export class OneInchService {
 
         // Check order status
         const status = await this.getCrossChainOrderStatus(orderHash);
-        
+
         if (status.status === OrderStatus.Executed ||
             status.status === OrderStatus.Expired ||
             status.status === OrderStatus.Refunded) {
-          this.logger.info('Order monitoring completed', { 
-            orderHash, 
-            finalStatus: status.status 
+          this.logger.info('Order monitoring completed', {
+            orderHash,
+            finalStatus: status.status
           });
           return status;
         }

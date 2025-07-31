@@ -289,8 +289,8 @@ router.get('/metrics', async (req, res) => {
           failedSwaps: botStatus.metrics.failedSwaps || 0,
           totalVolume: botStatus.metrics.totalVolume?.toString() || '0',
           avgExecutionTime: botStatus.metrics.averageExecutionTime || 0,
-          successRate: botStatus.metrics.totalSwapsProcessed > 0 
-            ? (botStatus.metrics.successfulSwaps / botStatus.metrics.totalSwapsProcessed) * 100 
+          successRate: botStatus.metrics.totalSwapsProcessed > 0
+            ? (botStatus.metrics.successfulSwaps / botStatus.metrics.totalSwapsProcessed) * 100
             : 0
         };
       }
@@ -330,22 +330,22 @@ router.get('/metrics', async (req, res) => {
 router.get('/swaps', async (req, res) => {
   try {
     const { services, logger } = req;
-    const { 
-      page = 1, 
-      limit = 20, 
-      status, 
-      fromChain, 
+    const {
+      page = 1,
+      limit = 20,
+      status,
+      fromChain,
       toChain,
       startDate,
-      endDate 
+      endDate
     } = req.query;
 
-    logger.info('Resolver swaps history request', { 
-      page, 
-      limit, 
-      status, 
-      fromChain, 
-      toChain 
+    logger.info('Resolver swaps history request', {
+      page,
+      limit,
+      status,
+      fromChain,
+      toChain
     });
 
     let swaps = [];
@@ -367,26 +367,26 @@ router.get('/swaps', async (req, res) => {
         swaps = swaps.filter(swap => swap.status === status);
       }
       if (fromChain) {
-        swaps = swaps.filter(swap => 
-          swap.type?.includes(fromChain.toUpperCase()) || 
+        swaps = swaps.filter(swap =>
+          swap.type?.includes(fromChain.toUpperCase()) ||
           swap.srcChainId?.toString() === fromChain
         );
       }
       if (toChain) {
-        swaps = swaps.filter(swap => 
-          swap.type?.includes(toChain.toUpperCase()) || 
+        swaps = swaps.filter(swap =>
+          swap.type?.includes(toChain.toUpperCase()) ||
           swap.dstChainId?.toString() === toChain
         );
       }
       if (startDate) {
         const start = new Date(startDate).getTime();
-        swaps = swaps.filter(swap => 
+        swaps = swaps.filter(swap =>
           new Date(swap.createdAt || swap.timestamp || 0).getTime() >= start
         );
       }
       if (endDate) {
         const end = new Date(endDate).getTime();
-        swaps = swaps.filter(swap => 
+        swaps = swaps.filter(swap =>
           new Date(swap.createdAt || swap.timestamp || 0).getTime() <= end
         );
       }
