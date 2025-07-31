@@ -29,8 +29,9 @@ function ManteiaWalletProviderInner({ children }: ManteiaWalletProviderProps) {
   const sui = useSuiWallet();
   const ethereum = useEthereumWallet();
 
-  const isAnyWalletConnected = sui.connected || ethereum.wallet.isConnected;
-  const areBothWalletsConnected = sui.connected && ethereum.wallet.isConnected;
+  // Safely check connection status
+  const isAnyWalletConnected = Boolean(sui?.connected || ethereum?.wallet?.isConnected);
+  const areBothWalletsConnected = Boolean(sui?.connected && ethereum?.wallet?.isConnected);
 
   const value: ManteiaWalletContextType = {
     sui,

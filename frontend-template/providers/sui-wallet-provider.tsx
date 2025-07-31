@@ -7,7 +7,6 @@ import {
   SuiTestnetChain,
   SuiMainnetChain,
 } from "@suiet/wallet-kit";
-import "@suiet/wallet-kit/style.css";
 
 /**
  * Sui Wallet Provider Component

@@ -2,6 +2,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "../providers/theme-provider";
 import { ManteiaWalletProvider } from "../providers/manteia-wallet-provider";
+import "@suiet/wallet-kit/style.css";
 import "./globals.css";
 
 export default function RootLayout({
@@ -14,16 +15,16 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ManteiaWalletProvider>
+        <ManteiaWalletProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
             {children}
-          </ManteiaWalletProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </ManteiaWalletProvider>
       </body>
     </html>
   );
