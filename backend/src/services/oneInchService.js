@@ -1,5 +1,15 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
+import { 
+  SDK as CrossChainSDK, 
+  HashLock, 
+  NetworkEnum, 
+  PresetEnum, 
+  OrderStatus,
+  PrivateKeyProviderConnector,
+  WebSocketApi
+} from '@1inch/cross-chain-sdk';
+import { randomBytes } from 'crypto';
 
 export class OneInchService {
   constructor({ apiKey, baseUrl, logger }) {
@@ -7,7 +17,7 @@ export class OneInchService {
     this.baseUrl = baseUrl;
     this.logger = logger;
 
-    // Create axios instance with default config
+    // Create axios instance for classic/fusion operations
     this.client = axios.create({
       baseURL: baseUrl,
       headers: {
@@ -17,101 +27,218 @@ export class OneInchService {
       timeout: 30000
     });
 
-    // Supported chains for cross-chain swaps
+    // Initialize Cross-Chain SDK
+    this.crossChainSDK = null;
+    this.websocketApi = null;
+
+    // Supported chains mapping
     this.supportedChains = {
-      1: 'ethereum',
-      137: 'polygon',
-      56: 'bsc',
-      42161: 'arbitrum',
-      10: 'optimism',
-      43114: 'avalanche',
-      8453: 'base'
+      1: NetworkEnum.ETHEREUM,
+      137: NetworkEnum.POLYGON,
+      56: NetworkEnum.BINANCE,
+      42161: NetworkEnum.ARBITRUM,
+      10: NetworkEnum.OPTIMISM,
+      43114: NetworkEnum.AVALANCHE,
+      8453: NetworkEnum.BASE
     };
 
     this.logger.info('1inch service initialized');
   }
 
-  // Fusion+ Cross-Chain Swap Methods
-  async getFusionQuote(params) {
+  // Initialize cross-chain SDK with blockchain provider
+  initializeCrossChainSDK(privateKey, web3Provider) {
     try {
-      const { srcChainId, dstChainId, srcTokenAddress, dstTokenAddress, amount } = params;
-
-      const response = await this.client.get('/fusion-plus/quoter/v1.0/quote', {
-        params: {
-          srcChainId,
-          dstChainId,
-          srcTokenAddress,
-          dstTokenAddress,
-          amount
-        }
+      const blockchainProvider = new PrivateKeyProviderConnector(privateKey, web3Provider);
+      
+      this.crossChainSDK = new CrossChainSDK({
+        url: 'https://api.1inch.dev/fusion-plus',
+        authKey: this.apiKey,
+        blockchainProvider
       });
 
-      this.logger.info('Fusion+ quote retrieved', {
+      // Initialize WebSocket API for real-time updates
+      this.websocketApi = new WebSocketApi({
+        url: 'wss://api.1inch.dev/fusion-plus/ws',
+        authKey: this.apiKey
+      });
+
+      this.logger.info('Cross-chain SDK initialized');
+      return true;
+    } catch (error) {
+      this.logger.error('Error initializing cross-chain SDK:', error);
+      return false;
+    }
+  }
+
+  // Cross-Chain Swap Methods using proper SDK
+  async getCrossChainQuote(params) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      const { srcChainId, dstChainId, srcTokenAddress, dstTokenAddress, amount, walletAddress } = params;
+
+      const quote = await this.crossChainSDK.getQuote({
+        amount,
+        srcChainId: this.supportedChains[srcChainId] || srcChainId,
+        dstChainId: this.supportedChains[dstChainId] || dstChainId,
+        srcTokenAddress,
+        dstTokenAddress,
+        walletAddress,
+        enableEstimate: true
+      });
+
+      this.logger.info('Cross-chain quote retrieved', {
         srcChain: srcChainId,
         dstChain: dstChainId,
         amount
       });
 
-      return response.data;
+      return quote;
     } catch (error) {
-      this.logger.error('Error getting Fusion+ quote:', error);
-      throw new Error(`Failed to get Fusion+ quote: ${error.message}`);
+      this.logger.error('Error getting cross-chain quote:', error);
+      throw new Error(`Failed to get cross-chain quote: ${error.message}`);
     }
+  }
+
+  async createCrossChainOrder(params) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      const {
+        quote,
+        walletAddress,
+        preset = PresetEnum.fast,
+        source = 'manteia-dex'
+      } = params;
+
+      // Generate secrets for the order
+      const secretsCount = quote.presets[preset].secretsCount;
+      const secrets = Array.from({ length: secretsCount }).map(() => 
+        '0x' + randomBytes(32).toString('hex')
+      );
+
+      // Create hash lock
+      const hashLock = secrets.length === 1
+        ? HashLock.forSingleFill(secrets[0])
+        : HashLock.forMultipleFills(HashLock.getMerkleLeaves(secrets));
+
+      // Generate secret hashes
+      const secretHashes = secrets.map(secret => HashLock.hashSecret(secret));
+
+      // Create the order
+      const { hash, quoteId, order } = await this.crossChainSDK.createOrder(quote, {
+        walletAddress,
+        hashLock,
+        preset,
+        source,
+        secretHashes
+      });
+
+      this.logger.info('Cross-chain order created', {
+        orderHash: hash,
+        quoteId
+      });
+
+      return {
+        orderHash: hash,
+        quoteId,
+        order,
+        secrets,
+        secretHashes
+      };
+    } catch (error) {
+      this.logger.error('Error creating cross-chain order:', error);
+      throw new Error(`Failed to create cross-chain order: ${error.message}`);
+    }
+  }
+
+  async submitCrossChainOrder(params) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      const { srcChainId, order, quoteId, secretHashes } = params;
+
+      const orderInfo = await this.crossChainSDK.submitOrder(
+        this.supportedChains[srcChainId] || srcChainId,
+        order,
+        quoteId,
+        secretHashes
+      );
+
+      this.logger.info('Cross-chain order submitted', {
+        orderHash: params.orderHash || 'unknown'
+      });
+
+      return orderInfo;
+    } catch (error) {
+      this.logger.error('Error submitting cross-chain order:', error);
+      throw new Error(`Failed to submit cross-chain order: ${error.message}`);
+    }
+  }
+
+  async getCrossChainOrderStatus(orderHash) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      const status = await this.crossChainSDK.getOrderStatus(orderHash);
+      return status;
+    } catch (error) {
+      this.logger.error('Error getting cross-chain order status:', error);
+      throw new Error(`Failed to get order status: ${error.message}`);
+    }
+  }
+
+  async getReadyToAcceptSecrets(orderHash) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      const secretsToShare = await this.crossChainSDK.getReadyToAcceptSecretFills(orderHash);
+      return secretsToShare;
+    } catch (error) {
+      this.logger.error('Error getting ready secrets:', error);
+      throw new Error(`Failed to get ready secrets: ${error.message}`);
+    }
+  }
+
+  async submitSecret(orderHash, secret) {
+    try {
+      if (!this.crossChainSDK) {
+        throw new Error('Cross-chain SDK not initialized. Call initializeCrossChainSDK first.');
+      }
+
+      await this.crossChainSDK.submitSecret(orderHash, secret);
+      
+      this.logger.info('Secret submitted for order', { orderHash });
+      return true;
+    } catch (error) {
+      this.logger.error('Error submitting secret:', error);
+      throw new Error(`Failed to submit secret: ${error.message}`);
+    }
+  }
+
+  // Legacy method names for backward compatibility
+  async getFusionQuote(params) {
+    return this.getCrossChainQuote(params);
   }
 
   async createFusionOrder(params) {
-    try {
-      const {
-        srcChainId,
-        dstChainId,
-        srcTokenAddress,
-        dstTokenAddress,
-        amount,
-        userAddress,
-        hashLock,
-        timelock,
-        crossChainId
-      } = params;
-
-      // Create order with atomic swap parameters
-      const orderData = {
-        srcChainId,
-        dstChainId,
-        srcTokenAddress,
-        dstTokenAddress,
-        amount,
-        userAddress,
-        // Custom data for our atomic swap
-        customData: {
-          hashLock,
-          timelock,
-          crossChainId,
-          protocol: 'manteia'
-        }
-      };
-
-      const response = await this.client.post('/fusion-plus/quoter/v1.0/orders', orderData);
-
-      this.logger.info('Fusion+ order created', {
-        orderId: response.data.orderId,
-        crossChainId
-      });
-
-      return response.data;
-    } catch (error) {
-      this.logger.error('Error creating Fusion+ order:', error);
-      throw new Error(`Failed to create Fusion+ order: ${error.message}`);
-    }
+    // Convert legacy params to new format
+    const quote = await this.getCrossChainQuote(params);
+    return this.createCrossChainOrder({ quote, ...params });
   }
 
-  async getFusionOrderStatus(orderId) {
-    try {
-      const response = await this.client.get(`/fusion-plus/relayer/v1.0/orders/${orderId}`);
-      return response.data;
-    } catch (error) {
-      this.logger.error('Error getting Fusion+ order status:', error);
-      throw new Error(`Failed to get order status: ${error.message}`);
-    }
+  async getFusionOrderStatus(orderHash) {
+    return this.getCrossChainOrderStatus(orderHash);
   }
 
   // Limit Order Protocol Methods for Advanced Strategies
@@ -379,22 +506,104 @@ export class OneInchService {
     );
   }
 
-  // WebSocket connection for real-time updates
+  // WebSocket Methods for Real-time Updates
+  setupWebSocketSubscriptions(eventHandlers = {}) {
+    if (!this.websocketApi) {
+      this.logger.warn('WebSocket API not initialized');
+      return false;
+    }
+
+    try {
+      // Subscribe to all order events
+      this.websocketApi.order.onOrder((data) => {
+        this.logger.debug('Received order event', { type: data.event });
+        
+        switch (data.event) {
+          case 'order_created':
+            if (eventHandlers.onOrderCreated) {
+              eventHandlers.onOrderCreated(data.data);
+            }
+            break;
+          case 'order_filled':
+            if (eventHandlers.onOrderFilled) {
+              eventHandlers.onOrderFilled(data.data);
+            }
+            break;
+          case 'order_cancelled':
+            if (eventHandlers.onOrderCancelled) {
+              eventHandlers.onOrderCancelled(data.data);
+            }
+            break;
+          case 'order_filled_partially':
+            if (eventHandlers.onOrderFilledPartially) {
+              eventHandlers.onOrderFilledPartially(data.data);
+            }
+            break;
+          case 'secret_shared':
+            if (eventHandlers.onSecretShared) {
+              eventHandlers.onSecretShared(data.data);
+            }
+            break;
+          default:
+            this.logger.debug('Unhandled order event', data.event);
+        }
+      });
+
+      // Subscribe to specific order events
+      this.websocketApi.order.onOrderCreated((data) => {
+        this.logger.info('Order created', { orderHash: data.orderHash });
+      });
+
+      this.websocketApi.order.onOrderFilled((data) => {
+        this.logger.info('Order filled', { orderHash: data.orderHash });
+      });
+
+      // Connection event handlers
+      this.websocketApi.onOpen(() => {
+        this.logger.info('1inch WebSocket connected');
+      });
+
+      this.websocketApi.onError((error) => {
+        this.logger.error('1inch WebSocket error:', error);
+      });
+
+      this.websocketApi.onClose(() => {
+        this.logger.warn('1inch WebSocket disconnected');
+      });
+
+      this.logger.info('WebSocket subscriptions setup completed');
+      return true;
+    } catch (error) {
+      this.logger.error('Error setting up WebSocket subscriptions:', error);
+      return false;
+    }
+  }
+
+  // Legacy method for backward compatibility
   async subscribeToOrders(callback) {
     try {
-      // Implementation would use 1inch WebSocket API
-      this.logger.info('Subscribing to order updates via WebSocket');
+      if (!this.websocketApi) {
+        // Fallback to polling if WebSocket not available
+        this.logger.info('WebSocket not available, falling back to polling');
+        
+        setInterval(async () => {
+          try {
+            const orders = await this.getActiveOrders();
+            callback(orders);
+          } catch (error) {
+            this.logger.error('Error in order polling:', error);
+          }
+        }, 5000);
+        
+        return;
+      }
 
-      // For demo purposes, we'll simulate with polling
-      setInterval(async () => {
-        try {
-          // Poll for order updates
-          const orders = await this.getActiveOrders();
-          callback(orders);
-        } catch (error) {
-          this.logger.error('Error in order subscription:', error);
-        }
-      }, 5000);
+      // Use WebSocket subscription
+      this.setupWebSocketSubscriptions({
+        onOrderCreated: callback,
+        onOrderFilled: callback,
+        onOrderCancelled: callback
+      });
 
     } catch (error) {
       this.logger.error('Error subscribing to orders:', error);
@@ -402,14 +611,74 @@ export class OneInchService {
     }
   }
 
-  async getActiveOrders() {
+  async getActiveOrders(params = {}) {
     try {
-      // This would get active orders from 1inch
-      // For demo purposes, returning empty array
-      return [];
+      if (this.crossChainSDK) {
+        // Get active orders from cross-chain SDK
+        const orders = await this.crossChainSDK.getActiveOrders({
+          page: params.page || 1,
+          limit: params.limit || 20
+        });
+        return orders;
+      } else {
+        // Fallback to direct API call
+        const response = await this.client.get('/fusion-plus/relayer/v1.0/orders/active', {
+          params: {
+            page: params.page || 1,
+            limit: params.limit || 20
+          }
+        });
+        return response.data;
+      }
     } catch (error) {
       this.logger.error('Error getting active orders:', error);
       throw error;
+    }
+  }
+
+  // Monitor order execution with automatic secret submission
+  async monitorAndExecuteOrder(orderHash, secrets) {
+    if (!this.crossChainSDK) {
+      throw new Error('Cross-chain SDK not initialized');
+    }
+
+    this.logger.info('Starting order monitoring', { orderHash });
+
+    while (true) {
+      try {
+        // Check for secrets ready to be shared
+        const secretsToShare = await this.getReadyToAcceptSecrets(orderHash);
+
+        if (secretsToShare.fills && secretsToShare.fills.length > 0) {
+          for (const { idx } of secretsToShare.fills) {
+            if (secrets[idx]) {
+              await this.submitSecret(orderHash, secrets[idx]);
+              this.logger.info('Secret submitted', { orderHash, idx });
+            }
+          }
+        }
+
+        // Check order status
+        const status = await this.getCrossChainOrderStatus(orderHash);
+        
+        if (status.status === OrderStatus.Executed ||
+            status.status === OrderStatus.Expired ||
+            status.status === OrderStatus.Refunded) {
+          this.logger.info('Order monitoring completed', { 
+            orderHash, 
+            finalStatus: status.status 
+          });
+          return status;
+        }
+
+        // Wait before next check
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+      } catch (error) {
+        this.logger.error('Error in order monitoring:', error);
+        // Continue monitoring despite errors
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
   }
 }

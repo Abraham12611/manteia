@@ -91,6 +91,38 @@ class ManteiaServer {
       logger: this.logger
     });
 
+    // Initialize cross-chain SDK if required environment variables are available
+    if (process.env.RESOLVER_PRIVATE_KEY && process.env.ETH_RPC_URL) {
+      try {
+        const Web3 = (await import('web3')).default;
+        const web3Provider = new Web3(process.env.ETH_RPC_URL);
+        
+        const success = this.services.oneInch.initializeCrossChainSDK(
+          process.env.RESOLVER_PRIVATE_KEY,
+          web3Provider
+        );
+        
+        if (success) {
+          // Setup WebSocket event handlers
+          this.services.oneInch.setupWebSocketSubscriptions({
+            onOrderCreated: (data) => {
+              this.services.websocket?.broadcastOrderCreated(data);
+            },
+            onOrderFilled: (data) => {
+              this.services.websocket?.broadcastOrderFilled(data);
+            },
+            onOrderCancelled: (data) => {
+              this.services.websocket?.broadcastOrderCancelled(data);
+            }
+          });
+        }
+      } catch (error) {
+        this.logger.warn('Failed to initialize cross-chain SDK:', error.message);
+      }
+    } else {
+      this.logger.warn('Cross-chain SDK not initialized: missing RESOLVER_PRIVATE_KEY or ETH_RPC_URL');
+    }
+
     // Initialize WebSocket service
     this.services.websocket = new WebSocketService({
       oneInchService: this.services.oneInch,
