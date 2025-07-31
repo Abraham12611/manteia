@@ -1,14 +1,18 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
-import {
-  SDK as CrossChainSDK,
+// Import as default export due to CommonJS compatibility
+import CrossChainSDKPackage from '@1inch/cross-chain-sdk';
+
+// Destructure the needed components
+const {
+  SDK: CrossChainSDK,
   HashLock,
   NetworkEnum,
   PresetEnum,
   OrderStatus,
   PrivateKeyProviderConnector,
   WebSocketApi
-} from '@1inch/cross-chain-sdk';
+} = CrossChainSDKPackage;
 import { randomBytes } from 'crypto';
 
 export class OneInchService {

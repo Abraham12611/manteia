@@ -121,7 +121,7 @@ router.post('/quote', quoteRateLimiter, validateRequest(quoteSchema), async (req
           toTokenAddress,
           fromAmount: amount,
           toAmount: amount, // Would calculate based on current rates
-          swapType = 'atomic_swap',
+          swapType: 'atomic_swap',
           chainType: 'cross_chain',
           direction: 'sui_to_eth',
           priceImpact: '0.02',
