@@ -52,6 +52,10 @@ export function useManteiaApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Integration hooks
+  const oneInch = useOneInchIntegration();
+  const cetus = useCetusIntegration();
+
   // Generic API call function
   const apiCall = useCallback(async <T>(
     endpoint: string,

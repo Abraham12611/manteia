@@ -2,6 +2,7 @@
 
 import { SwapInterface } from "@/components/swap-interface";
 import { WalletStatusDisplay } from "@/components/wallet-status-display";
+import { WalletBalanceDisplay } from "@/components/wallet-balance-display";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -238,6 +239,9 @@ export default function SwapPage() {
                 </Button>
               </CardContent>
             </Card>
+
+                        {/* Wallet Balances */}
+            <WalletBalanceDisplay />
 
             {/* Recent Activity */}
             <Card>
