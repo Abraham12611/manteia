@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { TransactionBlock } from "@mysten/sui/transactions";
+import { initCetusSDK, Percentage, adjustForSlippage, d } from "@cetusprotocol/cetus-sui-clmm-sdk";
+import BN from "bn.js";
 
 /**
  * Hook for Cetus CLMM DEX Integration
@@ -11,15 +13,14 @@ import { TransactionBlock } from "@mysten/sui/transactions";
  */
 
 interface CetusPool {
-  id: string;
-  coin_type_a: string;
-  coin_type_b: string;
+  poolAddress: string;
+  coinTypeA: string;
+  coinTypeB: string;
   current_sqrt_price: string;
   fee_rate: number;
   liquidity: string;
   tick_current_index: number;
   tick_spacing: number;
-  type: string;
 }
 
 interface CetusSwapParams {
@@ -47,76 +48,78 @@ interface CetusSwapResult {
   error?: string;
 }
 
-// Cetus Contract Addresses (Testnet)
-const CETUS_CONFIG = {
-  GLOBAL_CONFIG_ID: "0x0408fa4e4a4c03cc0de8f23d0c2bbfe8913d178713c9a271ed4080973fe42060",
-  CLOCK_ADDRESS: "0x6",
-  // Add more contract addresses as needed
-};
+// Cetus Token Addresses on Sui
+const CETUS_TOKEN = "0x6864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS";
+const XCETUS_TOKEN = "0x9e69acc50ca03bc943c4f7c5304c2a6002d507b51c11913b247159c60422c606::xcetus::XCETUS";
 
-// Initialize Sui client for Cetus integration
-const initSuiClient = () => {
-  return new SuiClient({
-    url: getFullnodeUrl("testnet"),
-  });
-};
+// USDC on Sui Testnet (from Circle's official testnet faucet)
+const USDC_TESTNET = "0xa1ec7fc00a6f40db9693ad1415d0c193ad3906494428cf252621037bd7117e29::usdc::USDC";
 
 export function useCetusIntegration() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sdkInstance, setSdkInstance] = useState<any>(null);
 
-  // Get pool information for a trading pair
+  // Initialize Cetus SDK
+  useEffect(() => {
+    try {
+      const sdk = initCetusSDK({
+        network: 'testnet',
+        fullNodeUrl: getFullnodeUrl('testnet')
+      });
+      setSdkInstance(sdk);
+    } catch (err: any) {
+      console.error("Failed to initialize Cetus SDK:", err);
+      setError("Failed to initialize Cetus SDK");
+    }
+  }, []);
+
+  // Get pool information for a trading pair using real Cetus SDK
   const getPool = useCallback(async (
     coinTypeA: string,
     coinTypeB: string,
-    feeTier: number = 0.0025 // Default to 0.25% fee tier
+    feeTier: number = 2500 // Default to 0.25% fee tier (2500 = 25 basis points)
   ): Promise<CetusPool | null> => {
+    if (!sdkInstance) {
+      setError("Cetus SDK not initialized");
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const suiClient = initSuiClient();
+      // Get pools from Cetus SDK
+      const pools = await sdkInstance.Pool.getPoolList(coinTypeA, coinTypeB);
 
-      // Search for pools with the specified coin types
-      // This is a simplified approach - in practice, you'd use the Cetus SDK
-      // or query the Cetus indexer API for more efficient pool discovery
-      const poolObjects = await suiClient.getOwnedObjects({
-        owner: CETUS_CONFIG.GLOBAL_CONFIG_ID,
-        filter: {
-          StructType: `${CETUS_CONFIG.GLOBAL_CONFIG_ID}::pool::Pool<${coinTypeA}, ${coinTypeB}>`,
-        },
-        options: {
-          showContent: true,
-          showType: true,
-        },
-      });
-
-      // Find pool with matching fee tier
-      for (const poolObj of poolObjects.data) {
-        if (poolObj.data?.content && "fields" in poolObj.data.content) {
-          const fields = poolObj.data.content.fields as any;
-
-          // Check if fee rate matches (convert from basis points)
-          const poolFeeRate = parseInt(fields.fee_rate) / 10000;
-
-          if (Math.abs(poolFeeRate - feeTier) < 0.0001) {
-            return {
-              id: poolObj.data.objectId,
-              coin_type_a: coinTypeA,
-              coin_type_b: coinTypeB,
-              current_sqrt_price: fields.current_sqrt_price || "0",
-              fee_rate: poolFeeRate,
-              liquidity: fields.liquidity || "0",
-              tick_current_index: parseInt(fields.tick_current_index) || 0,
-              tick_spacing: parseInt(fields.tick_spacing) || 1,
-              type: poolObj.data.type || "",
-            };
-          }
-        }
+      if (!pools || pools.length === 0) {
+        setError("No pools found for this pair");
+        return null;
       }
 
-      // If no exact match found, return null
-      return null;
+      // Find pool with matching fee tier
+      const targetPool = pools.find((pool: any) => {
+        const poolFeeRate = pool.fee_rate;
+        return Math.abs(poolFeeRate - feeTier) < 10; // Allow small difference
+      }) || pools[0]; // Default to first pool if no exact match
+
+      if (!targetPool) {
+        return null;
+      }
+
+      // Fetch detailed pool data
+      const poolData = await sdkInstance.Pool.getPool(targetPool.poolAddress);
+
+      return {
+        poolAddress: poolData.poolAddress,
+        coinTypeA: poolData.coinTypeA,
+        coinTypeB: poolData.coinTypeB,
+        current_sqrt_price: poolData.current_sqrt_price.toString(),
+        fee_rate: poolData.fee_rate,
+        liquidity: poolData.liquidity.toString(),
+        tick_current_index: poolData.tick_current_index,
+        tick_spacing: poolData.tick_spacing,
+      };
     } catch (err: any) {
       const errorMessage = err.message || "Failed to get pool";
       setError(errorMessage);
@@ -124,53 +127,43 @@ export function useCetusIntegration() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sdkInstance]);
 
-    // Pre-calculate swap amounts and fees using real pool data
+  // Pre-calculate swap amounts and fees using real Cetus SDK
   const preSwap = useCallback(async (
     params: CetusSwapParams
   ): Promise<CetusPreSwapResult | null> => {
+    if (!sdkInstance) {
+      setError("Cetus SDK not initialized");
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const suiClient = initSuiClient();
-
       // Get pool data
-      const poolObject = await suiClient.getObject({
-        id: params.pool_id,
-        options: {
-          showContent: true,
-          showType: true,
-        },
+      const pool = await sdkInstance.Pool.getPool(params.pool_id);
+
+      // Pre-calculate swap using Cetus SDK
+      const preSwapResult = await sdkInstance.Swap.preSwap({
+        pool: pool,
+        current_sqrt_price: pool.current_sqrt_price,
+        coinTypeA: params.coin_type_a,
+        coinTypeB: params.coin_type_b,
+        decimalsA: 9, // Most Sui tokens use 9 decimals
+        decimalsB: params.coin_type_b === USDC_TESTNET ? 6 : 9, // USDC uses 6 decimals
+        a2b: params.a2b,
+        by_amount_in: params.by_amount_in,
+        amount: params.amount,
       });
 
-      if (!poolObject.data?.content || !("fields" in poolObject.data.content)) {
-        throw new Error("Pool not found or invalid pool data");
-      }
-
-      const poolFields = poolObject.data.content.fields as any;
-      const currentSqrtPrice = poolFields.current_sqrt_price;
-      const liquidity = poolFields.liquidity;
-      const feeRate = parseInt(poolFields.fee_rate) / 1000000; // Convert from ppm
-
-      // Simplified price calculation
-      // In a real implementation, you'd use the Cetus SDK's price calculation
-      const inputAmount = parseFloat(params.amount);
-
-      // Mock calculation based on square root price
-      // This is a simplified version - real implementation would use Cetus math
-      const priceRatio = params.a2b ? 0.95 : 1.05; // Simplified price impact
-      const outputAmount = inputAmount * priceRatio;
-      const fee = inputAmount * feeRate;
-      const priceImpact = Math.abs(1 - priceRatio) * 100;
-
       return {
-        estimated_amount_in: params.by_amount_in ? params.amount : (inputAmount / priceRatio).toString(),
-        estimated_amount_out: params.by_amount_in ? outputAmount.toString() : params.amount,
-        amount: params.amount,
-        fee: fee.toString(),
-        price_impact: priceImpact
+        estimated_amount_in: preSwapResult.estimatedAmountIn.toString(),
+        estimated_amount_out: preSwapResult.estimatedAmountOut.toString(),
+        amount: preSwapResult.amount.toString(),
+        fee: preSwapResult.fee.toString(),
+        price_impact: preSwapResult.priceImpact || 0,
       };
     } catch (err: any) {
       const errorMessage = err.message || "Failed to calculate swap";
@@ -179,13 +172,21 @@ export function useCetusIntegration() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sdkInstance]);
 
-  // Execute swap transaction using Sui TransactionBlock
+  // Execute swap transaction using real Cetus SDK
   const executeSwap = useCallback(async (
     params: CetusSwapParams,
     walletSignAndExecute?: (tx: TransactionBlock) => Promise<any>
   ): Promise<CetusSwapResult> => {
+    if (!sdkInstance) {
+      setError("Cetus SDK not initialized");
+      return {
+        success: false,
+        error: "Cetus SDK not initialized"
+      };
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -194,27 +195,28 @@ export function useCetusIntegration() {
         throw new Error("Wallet function not provided");
       }
 
-      // Create transaction block for Cetus swap
-      const tx = new TransactionBlock();
+      // Calculate slippage-adjusted amount limit
+      const slippage = Percentage.fromDecimal(d(params.slippage));
+      const amountLimit = adjustForSlippage(
+        new BN(params.amount_limit),
+        slippage,
+        !params.by_amount_in
+      );
 
-      // This is a simplified version of a Cetus swap transaction
-      // In a real implementation, you'd use the official Cetus SDK
-      tx.moveCall({
-        target: `${CETUS_CONFIG.GLOBAL_CONFIG_ID}::clmm_math::swap`,
-        arguments: [
-          tx.object(CETUS_CONFIG.GLOBAL_CONFIG_ID), // config
-          tx.object(params.pool_id), // pool
-          tx.pure(params.a2b), // a2b
-          tx.pure(params.by_amount_in), // by_amount_in
-          tx.pure(params.amount), // amount
-          tx.pure(params.amount_limit), // amount_limit
-          tx.object(CETUS_CONFIG.CLOCK_ADDRESS), // clock
-        ],
-        typeArguments: [params.coin_type_a, params.coin_type_b],
+      // Create swap transaction payload using Cetus SDK
+      const swapPayload = await sdkInstance.Swap.createSwapTransactionPayload({
+        pool_id: params.pool_id,
+        coinTypeA: params.coin_type_a,
+        coinTypeB: params.coin_type_b,
+        a2b: params.a2b,
+        by_amount_in: params.by_amount_in,
+        amount: params.amount,
+        amount_limit: amountLimit.toString(),
+        swap_partner: "", // No partner for now
       });
 
       // Execute transaction through wallet
-      const result = await walletSignAndExecute(tx);
+      const result = await walletSignAndExecute(swapPayload);
 
       return {
         success: true,
@@ -230,88 +232,74 @@ export function useCetusIntegration() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sdkInstance]);
 
   // Calculate slippage-adjusted amount limit
   const calculateAmountLimit = useCallback((
     estimatedAmount: string,
     slippagePercent: number,
-    isMinimumOut: boolean
+    isForMinOutput: boolean
   ): string => {
     const amount = parseFloat(estimatedAmount);
     const slippageFactor = slippagePercent / 100;
 
-    if (isMinimumOut) {
+    if (isForMinOutput) {
       // For minimum output, subtract slippage
-      return (amount * (1 - slippageFactor)).toString();
+      return Math.floor(amount * (1 - slippageFactor)).toString();
     } else {
       // For maximum input, add slippage
-      return (amount * (1 + slippageFactor)).toString();
+      return Math.ceil(amount * (1 + slippageFactor)).toString();
     }
   }, []);
 
-  // Get optimal routing between tokens using real pool data
+  // Get optimal routing between tokens using real Cetus SDK
   const findBestRoute = useCallback(async (
     fromToken: string,
     toToken: string,
     amount: string,
     isFixedInput: boolean = true
   ): Promise<CetusPool[]> => {
+    if (!sdkInstance) {
+      setError("Cetus SDK not initialized");
+      return [];
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const suiClient = initSuiClient();
+      // Get all pools for this pair
+      const pools = await sdkInstance.Pool.getPoolList(fromToken, toToken);
 
-      // Search for direct pools between the tokens
-      const directPools = await suiClient.getOwnedObjects({
-        owner: CETUS_CONFIG.GLOBAL_CONFIG_ID,
-        filter: {
-          StructType: `${CETUS_CONFIG.GLOBAL_CONFIG_ID}::pool::Pool<${fromToken}, ${toToken}>`,
-        },
-        options: {
-          showContent: true,
-          showType: true,
-        },
-      });
-
-      // Also search for reverse direction
-      const reversePools = await suiClient.getOwnedObjects({
-        owner: CETUS_CONFIG.GLOBAL_CONFIG_ID,
-        filter: {
-          StructType: `${CETUS_CONFIG.GLOBAL_CONFIG_ID}::pool::Pool<${toToken}, ${fromToken}>`,
-        },
-        options: {
-          showContent: true,
-          showType: true,
-        },
-      });
-
-      const allPools = [...directPools.data, ...reversePools.data];
-      const routes: CetusPool[] = [];
-
-      for (const poolObj of allPools) {
-        if (poolObj.data?.content && "fields" in poolObj.data.content) {
-          const fields = poolObj.data.content.fields as any;
-
-          routes.push({
-            id: poolObj.data.objectId,
-            coin_type_a: fromToken,
-            coin_type_b: toToken,
-            current_sqrt_price: fields.current_sqrt_price || "0",
-            fee_rate: parseInt(fields.fee_rate) / 1000000,
-            liquidity: fields.liquidity || "0",
-            tick_current_index: parseInt(fields.tick_current_index) || 0,
-            tick_spacing: parseInt(fields.tick_spacing) || 1,
-            type: poolObj.data.type || "",
-          });
-        }
+      if (!pools || pools.length === 0) {
+        return [];
       }
 
-      // Sort by liquidity (highest first) for best routing
-      routes.sort((a, b) => parseFloat(b.liquidity) - parseFloat(a.liquidity));
+      // Fetch detailed data for each pool
+      const detailedPools = await Promise.all(
+        pools.map(async (pool: any) => {
+          const poolData = await sdkInstance.Pool.getPool(pool.poolAddress);
+          return {
+            poolAddress: poolData.poolAddress,
+            coinTypeA: poolData.coinTypeA,
+            coinTypeB: poolData.coinTypeB,
+            current_sqrt_price: poolData.current_sqrt_price.toString(),
+            fee_rate: poolData.fee_rate,
+            liquidity: poolData.liquidity.toString(),
+            tick_current_index: poolData.tick_current_index,
+            tick_spacing: poolData.tick_spacing,
+          };
+        })
+      );
 
-      return routes;
+      // Sort by liquidity (highest first) for best routing
+      detailedPools.sort((a, b) => {
+        const liquidityA = new BN(a.liquidity);
+        const liquidityB = new BN(b.liquidity);
+        return liquidityB.cmp(liquidityA);
+      });
+
+      return detailedPools;
     } catch (err: any) {
       const errorMessage = err.message || "Failed to find route";
       setError(errorMessage);
@@ -319,31 +307,68 @@ export function useCetusIntegration() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sdkInstance]);
 
   // Calculate swap fees for a route
   const calculateSwapFee = useCallback((
     route: CetusPool[],
     inputAmount: string
   ): string => {
-    const amount = parseFloat(inputAmount);
     let totalFee = 0;
+    let remainingAmount = parseFloat(inputAmount);
 
-    route.forEach(pool => {
-      totalFee += amount * pool.fee_rate;
-    });
+    for (const pool of route) {
+      const poolFee = remainingAmount * (pool.fee_rate / 1000000); // Fee rate is in parts per million
+      totalFee += poolFee;
+      remainingAmount -= poolFee;
+    }
 
     return totalFee.toString();
   }, []);
 
+  // Get price impact for a swap
+  const calculatePriceImpact = useCallback(async (
+    pool: CetusPool,
+    inputAmount: string,
+    isTokenAInput: boolean
+  ): Promise<number> => {
+    if (!sdkInstance) {
+      return 0;
+    }
+
+    try {
+      // Use Cetus SDK to calculate price impact
+      const poolData = await sdkInstance.Pool.getPool(pool.poolAddress);
+      const preSwapResult = await sdkInstance.Swap.preSwap({
+        pool: poolData,
+        current_sqrt_price: poolData.current_sqrt_price,
+        coinTypeA: pool.coinTypeA,
+        coinTypeB: pool.coinTypeB,
+        decimalsA: 9,
+        decimalsB: pool.coinTypeB === USDC_TESTNET ? 6 : 9,
+        a2b: isTokenAInput,
+        by_amount_in: true,
+        amount: inputAmount,
+      });
+
+      return preSwapResult.priceImpact || 0;
+    } catch {
+      return 0;
+    }
+  }, [sdkInstance]);
+
   return {
     loading,
     error,
+    cetusToken: CETUS_TOKEN,
+    xcetusToken: XCETUS_TOKEN,
+    usdcTestnet: USDC_TESTNET,
     getPool,
     preSwap,
     executeSwap,
     calculateAmountLimit,
     findBestRoute,
     calculateSwapFee,
+    calculatePriceImpact,
   };
 }

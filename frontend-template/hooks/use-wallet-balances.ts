@@ -41,8 +41,8 @@ interface WalletBalances {
 // Initialize Alchemy SDK for Ethereum balance checking
 const initAlchemy = () => {
   const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  if (!apiKey) {
-    console.warn("Alchemy API key not found. Some features may be limited.");
+  if (!apiKey || apiKey === "your_alchemy_api_key_here") {
+    console.warn("Alchemy API key not configured. Please set NEXT_PUBLIC_ALCHEMY_API_KEY in your .env.local file");
     return null;
   }
 
