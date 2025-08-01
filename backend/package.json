@@ -15,6 +15,8 @@
     "@1inch/fusion-sdk": "latest",
     "@1inch/limit-order-protocol": "latest",
     "@mysten/sui.js": "^0.50.0",
+    "@wormhole-foundation/sdk": "^3.1.0",
+    "@cetusprotocol/cetus-sui-clmm-sdk": "^5.4.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
