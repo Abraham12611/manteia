@@ -1,6 +1,7 @@
 "use client";
 
-import { SwapInterface } from "@/components/swap-interface";
+import { CrossChainSwapInterface } from "@/components/cross-chain-swap-interface";
+import { SwapHistory } from "@/components/swap-history";
 import { WalletStatusDisplay } from "@/components/wallet-status-display";
 import { WalletBalanceDisplay } from "@/components/wallet-balance-display";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,8 +47,8 @@ export default function SwapPage() {
         <div className="flex max-lg:flex-col flex-1 gap-6 py-6 w-full max-w-7xl mx-auto">
           {/* Main Swap Interface */}
           <div className="lg:flex-1 space-y-6">
-            {/* Swap Component */}
-            <SwapInterface />
+            {/* Cross-Chain Swap Component */}
+            <CrossChainSwapInterface />
 
             {/* Features Highlight */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -87,7 +88,7 @@ export default function SwapPage() {
                     </div>
                     <div>
                       <p className="font-medium">Trustless</p>
-                      <p className="text-sm text-muted-foreground">Hash time-locked contracts</p>
+                      <p className="text-sm text-muted-foreground">Wormhole + 1inch security</p>
                     </div>
                   </div>
                 </CardContent>
@@ -199,9 +200,9 @@ export default function SwapPage() {
             {/* Cross-Chain Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Cross-Chain Swaps</CardTitle>
+                <CardTitle className="text-lg">Cross-Chain Technology</CardTitle>
                 <CardDescription>
-                  Powered by 1inch Fusion+ and hash time-locked contracts
+                  Powered by 1inch, Wormhole, and Cetus DEX
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -235,7 +236,7 @@ export default function SwapPage() {
 
                 <Button variant="outline" className="w-full justify-start" size="sm">
                   <ExternalLink className="h-3 w-3 mr-2" />
-                  Learn about HTLC security
+                  Learn about our technology
                 </Button>
               </CardContent>
             </Card>
@@ -243,52 +244,8 @@ export default function SwapPage() {
                         {/* Wallet Balances */}
             <WalletBalanceDisplay />
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Recent Swaps</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpDown className="h-3 w-3" />
-                      <span>ETH → SUI</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">1.2 ETH</p>
-                      <p className="text-xs text-muted-foreground">2m ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpDown className="h-3 w-3" />
-                      <span>USDC → USDT</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">5,000 USDC</p>
-                      <p className="text-xs text-muted-foreground">5m ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <ArrowUpDown className="h-3 w-3" />
-                      <span>SUI → ETH</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">2,500 SUI</p>
-                      <p className="text-xs text-muted-foreground">8m ago</p>
-                    </div>
-                  </div>
-                </div>
-
-                <Button variant="ghost" className="w-full" size="sm">
-                  View All Activity
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Swap History */}
+            <SwapHistory limit={5} />
           </aside>
         </div>
       </main>
