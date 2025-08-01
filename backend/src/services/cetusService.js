@@ -1,6 +1,6 @@
 import { CetusClmmSDK, initCetusSDK, Percentage, adjustForSlippage, d } from '@cetusprotocol/cetus-sui-clmm-sdk';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { TransactionBlock } from '@mysten/sui/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 import BN from 'bn.js';
 
 /**

@@ -1,9 +1,8 @@
 import express from 'express';
-import { getLogger } from '../utils/logger.js';
+import logger from '../utils/logger.js';
 import { CrossChainSwapService } from '../services/crossChainSwapService.js';
 
 const router = express.Router();
-const logger = getLogger('CrossChainSwapAPI');
 
 // Initialize cross-chain swap service
 let crossChainSwapService;

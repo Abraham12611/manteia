@@ -1022,7 +1022,7 @@ export class OneInchService {
    * @private
    */
   async _callSwapAPI(endpoint, params, chainId) {
-    const baseUrl = `https://api.1inch.dev/swap/v6.1/${chainId}`;
+    const baseUrl = `https://api.1inch.dev/swap/v5.2/${chainId}`;
 
     const url = new URL(baseUrl + endpoint);
     if (params && Object.keys(params).length > 0) {

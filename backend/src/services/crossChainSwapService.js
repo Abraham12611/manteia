@@ -1,7 +1,8 @@
 import { OneInchService } from './oneInchService.js';
-import { WormholeService } from './wormholeService.js';
+import { WormholeService } from './wormholeService-simple.js';
 import { CetusService } from './cetusService.js';
 import { SuiService } from './suiService.js';
+import { getContractAddresses } from '../config/contracts.js';
 
 /**
  * CrossChainSwapService - Orchestrates cross-chain swaps between Ethereum and Sui
@@ -11,6 +12,9 @@ export class CrossChainSwapService {
   constructor({ oneInchApiKey, network = 'testnet', logger }) {
     this.network = network;
     this.logger = logger;
+
+    // Get contract addresses for the current network
+    this.contracts = getContractAddresses();
 
     // Initialize all required services
     this.oneInchService = new OneInchService({
