@@ -24,22 +24,58 @@ const initializeCrossChainService = async () => {
 };
 
 /**
- * GET /api/swap/quote
+ * GET /api/swap/test-1inch
+ * Test 1inch API directly
+ */
+router.get('/test-1inch', async (req, res) => {
+  try {
+    logger.info('Testing 1inch API...');
+    const service = await initializeCrossChainService();
+
+    // Test simple ETH to USDC quote on Sepolia
+    const testQuote = await service.oneInchService.getSwapQuote({
+      src: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', // ETH
+      dst: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238', // USDC on Sepolia
+      amount: '20000000000000000', // 0.02 ETH in wei
+      chainId: 11155111 // Sepolia
+    });
+
+    logger.info('1inch test result:', testQuote);
+    res.json({
+      success: true,
+      test: '1inch API',
+      result: testQuote
+    });
+  } catch (error) {
+    logger.error('1inch test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/swap/quote
  * Get cross-chain swap quote
  */
 router.post('/quote', async (req, res) => {
   try {
+    logger.info('Quote request received:', req.body);
     const { fromChain, toChain, amount, fromToken, toToken, slippage } = req.body;
 
     // Validate required parameters
     if (!fromChain || !toChain || !amount || !fromToken || !toToken) {
+      logger.warn('Missing required parameters:', { fromChain, toChain, amount, fromToken, toToken });
       return res.status(400).json({
         success: false,
         error: 'Missing required parameters'
       });
     }
 
+    logger.info('Initializing cross-chain service...');
     const service = await initializeCrossChainService();
+    logger.info('Cross-chain service initialized, getting quote...');
 
     const quoteResult = await service.getCrossChainQuote({
       fromChain,
@@ -50,8 +86,10 @@ router.post('/quote', async (req, res) => {
       slippage: slippage || 0.5
     });
 
+    logger.info('Quote result:', { success: quoteResult.success, hasQuote: !!quoteResult.quote });
+
     if (quoteResult.success) {
-      res.json({
+      const response = {
         success: true,
         quote: {
           inputAmount: amount,
@@ -62,8 +100,11 @@ router.post('/quote', async (req, res) => {
           fees: quoteResult.quote.fees,
           route: []
         }
-      });
+      };
+      logger.info('Sending successful quote response');
+      res.json(response);
     } else {
+      logger.error('Quote failed:', quoteResult.error);
       res.status(400).json({
         success: false,
         error: quoteResult.error
