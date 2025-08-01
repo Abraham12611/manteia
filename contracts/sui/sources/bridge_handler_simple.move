@@ -147,7 +147,7 @@ module manteia::bridge_handler_simple {
         }
 
         // Record processed swap
-        vector::push_back(&mut registry.processed_swaps, swap_id);
+        // vector::push_back(&mut registry.processed_swaps, swap_id);
         registry.total_volume = registry.total_volume + input_amount;
 
         // Transfer output tokens to recipient
