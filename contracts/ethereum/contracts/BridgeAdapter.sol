@@ -1,11 +1,50 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+
+// 1inch Router interface
+interface IOneInchRouter {
+    function swap(
+        address caller,
+        SwapDescription calldata desc,
+        bytes calldata permit,
+        bytes calldata data
+    ) external payable returns (uint256 returnAmount, uint256 spentAmount);
+}
+
+struct SwapDescription {
+    address srcToken;
+    address dstToken;
+    address srcReceiver;
+    address dstReceiver;
+    uint256 amount;
+    uint256 minReturnAmount;
+    uint256 flags;
+}
+
+// Wormhole TokenBridge interface
+interface IWormholeTokenBridge {
+    function transferTokens(
+        address token,
+        uint256 amount,
+        uint16 recipientChain,
+        bytes32 recipient,
+        uint256 arbiterFee,
+        uint32 nonce
+    ) external payable returns (uint64 sequence);
+
+    function wrapAndTransferETH(
+        uint16 recipientChain,
+        bytes32 recipient,
+        uint256 arbiterFee,
+        uint32 nonce
+    ) external payable returns (uint64 sequence);
+}
 
 /**
  * @title BridgeAdapter
@@ -16,7 +55,7 @@ contract BridgeAdapter is Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // 1inch Router v5 address (same for mainnet and testnets)
-    address public constant ONEINCH_ROUTER = 0x1111111254fb6c44bac0bed2854e76f90643097d;
+    address public constant ONEINCH_ROUTER = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
 
     // Wormhole TokenBridge addresses
     address public immutable WORMHOLE_TOKEN_BRIDGE;
@@ -78,43 +117,7 @@ contract BridgeAdapter is Ownable, ReentrancyGuard, Pausable {
     mapping(address => bool) public authorizedCallers;
     uint256 public nextSwapId;
 
-    // Interfaces
-    interface IOneInchRouter {
-        function swap(
-            address caller,
-            SwapDescription calldata desc,
-            bytes calldata permit,
-            bytes calldata data
-        ) external payable returns (uint256 returnAmount, uint256 spentAmount);
-    }
 
-    struct SwapDescription {
-        address srcToken;
-        address dstToken;
-        address srcReceiver;
-        address dstReceiver;
-        uint256 amount;
-        uint256 minReturnAmount;
-        uint256 flags;
-    }
-
-    interface IWormholeTokenBridge {
-        function transferTokens(
-            address token,
-            uint256 amount,
-            uint16 recipientChain,
-            bytes32 recipient,
-            uint256 arbiterFee,
-            uint32 nonce
-        ) external payable returns (uint64 sequence);
-
-        function wrapAndTransferETH(
-            uint16 recipientChain,
-            bytes32 recipient,
-            uint256 arbiterFee,
-            uint32 nonce
-        ) external payable returns (uint64 sequence);
-    }
 
     /**
      * @dev Constructor
@@ -124,7 +127,7 @@ contract BridgeAdapter is Ownable, ReentrancyGuard, Pausable {
     constructor(
         address _wormholeTokenBridge,
         address _usdcToken
-    ) {
+    ) Ownable(msg.sender) {
         require(_wormholeTokenBridge != address(0), "Invalid Wormhole TokenBridge address");
         require(_usdcToken != address(0), "Invalid USDC token address");
 
@@ -250,7 +253,7 @@ contract BridgeAdapter is Ownable, ReentrancyGuard, Pausable {
         require(amount > 0, "No USDC to bridge");
 
         // Approve Wormhole TokenBridge to spend USDC
-        IERC20(USDC_TOKEN).safeApprove(WORMHOLE_TOKEN_BRIDGE, amount);
+        IERC20(USDC_TOKEN).forceApprove(WORMHOLE_TOKEN_BRIDGE, amount);
 
         // Execute bridge via Wormhole
         IWormholeTokenBridge(WORMHOLE_TOKEN_BRIDGE).transferTokens(
@@ -322,7 +325,7 @@ contract BridgeAdapter is Ownable, ReentrancyGuard, Pausable {
         IERC20(USDC_TOKEN).safeTransferFrom(msg.sender, address(this), swapParams.srcAmount);
 
         // Approve 1inch router to spend USDC
-        IERC20(USDC_TOKEN).safeApprove(ONEINCH_ROUTER, swapParams.srcAmount);
+        IERC20(USDC_TOKEN).forceApprove(ONEINCH_ROUTER, swapParams.srcAmount);
 
         // Prepare swap description
         SwapDescription memory desc = SwapDescription({

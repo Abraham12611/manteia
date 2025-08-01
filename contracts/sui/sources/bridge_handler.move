@@ -138,7 +138,7 @@ module manteia::bridge_handler {
     public fun process_swap_request<TokenIn, TokenOut>(
         request: &mut BridgeSwapRequest<TokenIn>,
         registry: &mut BridgeRegistry,
-        output_coin: Coin<TokenOut>,
+        mut output_coin: Coin<TokenOut>,
         clock: &Clock,
         ctx: &mut TxContext
     ) {
@@ -166,9 +166,6 @@ module manteia::bridge_handler {
                 fee_collector: registry.fee_collector,
             });
         }
-
-        // Mark as processed
-        request.is_processed = true;
 
         // Record processed swap
         vector::push_back(&mut registry.processed_swaps, request.swap_id);
@@ -198,11 +195,9 @@ module manteia::bridge_handler {
         assert!(current_time >= request.expiry, ESwapExpired);
         assert!(!request.is_processed, ESwapAlreadyProcessed);
 
-        // Mark as processed to prevent double spending
-        request.is_processed = true;
-
         // Extract the balance and return as coin
-        let balance = balance::split(&mut request.balance, balance::value(&request.balance));
+        let balance_value = balance::value(&request.balance);
+        let balance = balance::split(&mut request.balance, balance_value);
         let refund_coin = coin::from_balance(balance, ctx);
 
         event::emit(SwapFailed {
@@ -223,11 +218,9 @@ module manteia::bridge_handler {
         assert!(tx_context::sender(ctx) == registry.admin, EUnauthorized);
         assert!(!request.is_processed, ESwapAlreadyProcessed);
 
-        // Mark as processed
-        request.is_processed = true;
-
         // Extract balance and return as coin
-        let balance = balance::split(&mut request.balance, balance::value(&request.balance));
+        let balance_value = balance::value(&request.balance);
+        let balance = balance::split(&mut request.balance, balance_value);
         let refund_coin = coin::from_balance(balance, ctx);
 
         event::emit(SwapFailed {
