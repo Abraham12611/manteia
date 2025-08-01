@@ -92,13 +92,18 @@ router.post('/quote', async (req, res) => {
       const response = {
         success: true,
         quote: {
-          inputAmount: amount,
-          outputAmount: quoteResult.quote.estimatedOutput,
+          fromAmount: amount,
+          toAmount: quoteResult.quote.estimatedOutput,
+          estimatedGas: quoteResult.quote.gas || "200000",
           priceImpact: quoteResult.quote.priceImpact,
           minimumReceived: (parseFloat(quoteResult.quote.estimatedOutput) * (1 - (slippage || 0.5) / 100)).toString(),
           steps: quoteResult.quote.steps,
           fees: quoteResult.quote.fees,
-          route: []
+          route: quoteResult.quote.route || []
+        },
+        order: {
+          orderId: quoteResult.quote.orderId || `quote_${Date.now()}`,
+          expiresAt: Date.now() + (60 * 1000) // 1 minute expiration
         }
       };
       logger.info('Sending successful quote response');

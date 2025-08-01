@@ -56,7 +56,7 @@ export function SwapHistory({ limit = 10, showHeader = true }: SwapHistoryProps)
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://84.32.100.59:3001";
 
   // Fetch swap history
   const fetchSwapHistory = async () => {

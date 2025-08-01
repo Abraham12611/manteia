@@ -163,8 +163,17 @@ class ManteiaServer {
           return callback(null, true);
         }
 
+        // Allow remote server IP and ports
+        if (origin.match(/^http:\/\/84\.32\.100\.59:\d+$/)) {
+          return callback(null, true);
+        }
+
         // Allow specific origins from environment
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+          'http://localhost:3000',
+          'http://84.32.100.59:3000',
+          'http://84.32.100.59:52357'
+        ];
         if (allowedOrigins.indexOf(origin) !== -1) {
           return callback(null, true);
         }

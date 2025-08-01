@@ -6,10 +6,10 @@ import { useCetusIntegration } from "./use-cetus-integration";
 
 /**
  * Hook for Manteia Backend API Integration
- * Connects to the backend server running on localhost:3001
+ * Connects to the backend server running on 84.32.100.59:3001
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://84.32.100.59:3001";
 
 interface ApiResponse<T = any> {
   data: T | null;
@@ -87,7 +87,7 @@ export function useManteiaApi() {
       setLoading(true);
       setError(null);
 
-      const data = await apiCall<HealthResponse>("/health");
+      const data = await apiCall<HealthResponse>("/api/v1/health");
 
       return { data, error: null, loading: false };
     } catch (err: any) {
@@ -107,7 +107,7 @@ export function useManteiaApi() {
       setLoading(true);
       setError(null);
 
-      const data = await apiCall<SwapQuoteResponse>("/swap/quote", {
+      const data = await apiCall<SwapQuoteResponse>("/api/swap/quote", {
         method: "POST",
         body: JSON.stringify(request),
       });
@@ -131,7 +131,7 @@ export function useManteiaApi() {
       setLoading(true);
       setError(null);
 
-      const data = await apiCall<{ txHash: string; status: string }>("/swap/execute", {
+      const data = await apiCall<{ txHash: string; status: string }>("/api/swap/execute", {
         method: "POST",
         body: JSON.stringify({ orderId, signedTx }),
       });
@@ -155,7 +155,7 @@ export function useManteiaApi() {
       setError(null);
 
       const data = await apiCall<{ status: string; txHash?: string; error?: string }>(
-        `/swap/status/${orderId}`
+        `/api/swap/status/${orderId}`
       );
 
       return { data, error: null, loading: false };
@@ -177,7 +177,7 @@ export function useManteiaApi() {
       setLoading(true);
       setError(null);
 
-      const data = await apiCall<{ success: boolean; message: string }>("/resolver/register", {
+      const data = await apiCall<{ success: boolean; message: string }>("/api/v1/resolver/register", {
         method: "POST",
         body: JSON.stringify({ address, network }),
       });

@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import { OneInchService } from './oneInchService.js';
 import { WormholeService } from './wormholeService-simple.js';
 import { CetusService } from './cetusService.js';
@@ -40,7 +41,7 @@ export class CrossChainSwapService {
 
     // Chain IDs
     this.chainIds = {
-      ethereum: network === 'testnet' ? 11155111 : 1, // Sepolia or Mainnet
+      ethereum: 1, // Always use mainnet for 1inch API (testnet not supported in v6.0)
       sui: network === 'testnet' ? 'sui:testnet' : 'sui:mainnet'
     };
 
@@ -416,6 +417,30 @@ export class CrossChainSwapService {
   }
 
   /**
+   * Convert amount to wei for Ethereum tokens
+   * @param {string} amount - Amount in ETH (e.g., "0.002")
+   * @param {string} token - Token symbol (e.g., "ETH", "USDC")
+   * @returns {string} Amount in wei as string
+   */
+  convertToWei(amount, token) {
+    try {
+      if (token === 'ETH') {
+        // ETH has 18 decimals - using ethers v6 API
+        return ethers.parseEther(amount).toString();
+      } else if (token === 'USDC') {
+        // USDC has 6 decimals - using ethers v6 API
+        return ethers.parseUnits(amount, 6).toString();
+      } else {
+        // Default to 18 decimals for other tokens
+        return ethers.parseEther(amount).toString();
+      }
+    } catch (error) {
+      this.logger.error(`Failed to convert amount to wei: ${error.message}`);
+      throw new Error(`Invalid amount format: ${amount}`);
+    }
+  }
+
+  /**
    * Get quote for cross-chain swap
    * @param {Object} params - Quote parameters
    * @param {string} params.fromChain - Source chain ('ethereum' or 'sui')
@@ -452,13 +477,12 @@ export class CrossChainSwapService {
       if (fromChain === 'ethereum' && toChain === 'sui') {
         // ETH → SUI flow
 
-        // Step 1: ETH → USDC quote
+        // Step 1: ETH → USDC quote (always use mainnet for 1inch quotes)
+        const amountInWei = this.convertToWei(amount, 'ETH');
         const ethUsdcQuote = await this.oneInchService.getSwapQuote({
           src: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-          dst: this.chainIds.ethereum === 1
-            ? '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
-            : '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
-          amount,
+          dst: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC on mainnet
+          amount: amountInWei,
           chainId: this.chainIds.ethereum
         });
 
@@ -536,11 +560,9 @@ export class CrossChainSwapService {
           fees: bridgeFees
         });
 
-        // Step 3: USDC → ETH quote
+        // Step 3: USDC → ETH quote (always use mainnet for 1inch quotes)
         const usdcEthQuote = await this.oneInchService.getSwapQuote({
-          src: this.chainIds.ethereum === 1
-            ? '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
-            : '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+          src: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC on mainnet
           dst: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
           amount: suiUsdcQuote.outputAmount,
           chainId: this.chainIds.ethereum

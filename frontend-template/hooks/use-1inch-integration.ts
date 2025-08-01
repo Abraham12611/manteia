@@ -350,7 +350,7 @@ export function useOneInchIntegration() {
       // In production, this would submit to the 1inch relayer
       // For now, we'll use our backend to handle secret submission
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/fusion/submit-secret`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://84.32.100.59:3001'}/api/fusion/submit-secret`,
         {
           method: 'POST',
           headers: {
