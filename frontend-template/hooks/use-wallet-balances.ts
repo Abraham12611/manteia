@@ -1,337 +1,216 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useManteiaWallet } from "@/providers/manteia-wallet-provider";
-import { Alchemy, Network } from "alchemy-sdk";
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
-
-/**
- * Hook for checking wallet balances on both Ethereum and Sui
- * Based on official Alchemy SDK and Sui SDK documentation
- * @see https://github.com/alchemyplatform/alchemy-sdk-js
- * @see https://github.com/suiet/wallet-kit
- */
+import { useState, useEffect, useCallback } from 'react';
+import { ethers } from 'ethers';
+import { SUPPORTED_NETWORKS, Token, formatTokenAmount } from '@/lib/networks';
+import { useManteiaWallet } from '@/providers/manteia-wallet-provider';
 
 interface TokenBalance {
-  symbol: string;
-  name: string;
-  address: string;
+  token: Token;
   balance: string;
   formattedBalance: string;
-  decimals: number;
-  logo?: string;
-  price?: number;
+  usdValue?: string;
 }
 
-interface WalletBalances {
-  ethereum: {
-    native: TokenBalance | null;
-    tokens: TokenBalance[];
-    loading: boolean;
-    error: string | null;
-  };
-  sui: {
-    native: TokenBalance | null;
-    tokens: TokenBalance[];
-    loading: boolean;
-    error: string | null;
-  };
+interface UseWalletBalancesReturn {
+  balances: Record<string, TokenBalance[]>; // chainId -> balances
+  isLoading: boolean;
+  error: string | null;
+  refreshBalances: (chainId?: number) => Promise<void>;
+  getTokenBalance: (chainId: number, tokenAddress: string) => TokenBalance | null;
+  getNativeBalance: (chainId: number) => TokenBalance | null;
 }
 
-// Initialize Alchemy SDK for Ethereum balance checking
-const initAlchemy = () => {
-  const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  if (!apiKey || apiKey === "your_alchemy_api_key_here") {
-    console.warn("Alchemy API key not configured. Please set NEXT_PUBLIC_ALCHEMY_API_KEY in your .env.local file");
-    return null;
-  }
+export function useWalletBalances(): UseWalletBalancesReturn {
+  const { ethereum } = useManteiaWallet();
+  const [balances, setBalances] = useState<Record<string, TokenBalance[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  return new Alchemy({
-    apiKey,
-    network: Network.ETH_SEPOLIA, // Using Sepolia testnet
-  });
-};
+  // ERC20 ABI for balance checking
+  const ERC20_ABI = [
+    'function balanceOf(address owner) view returns (uint256)',
+    'function decimals() view returns (uint8)',
+    'function symbol() view returns (string)',
+    'function name() view returns (string)'
+  ];
 
-// Initialize Sui client for balance checking
-const initSuiClient = () => {
-  return new SuiClient({
-    url: getFullnodeUrl("testnet"), // Using testnet
-  });
-};
+  // Get provider for specific chain
+  const getProvider = useCallback((chainId: number) => {
+    const network = Object.values(SUPPORTED_NETWORKS).find(n => n.chainId === chainId);
+    if (!network) return null;
 
-export function useWalletBalances() {
-  const { sui, ethereum } = useManteiaWallet();
-  const [balances, setBalances] = useState<WalletBalances>({
-    ethereum: {
-      native: null,
-      tokens: [],
-      loading: false,
-      error: null,
-    },
-    sui: {
-      native: null,
-      tokens: [],
-      loading: false,
-      error: null,
-    },
-  });
+    return new ethers.JsonRpcProvider(network.rpcUrl);
+  }, []);
 
-  // Format balance for display
-  const formatBalance = useCallback((
-    balance: string,
-    decimals: number,
-    symbol: string
-  ): string => {
+  // Get native token balance
+  const getNativeBalance = useCallback(async (
+    chainId: number,
+    walletAddress: string,
+    provider: ethers.JsonRpcProvider
+  ): Promise<TokenBalance | null> => {
     try {
-      const value = parseFloat(balance) / Math.pow(10, decimals);
+      const network = Object.values(SUPPORTED_NETWORKS).find(n => n.chainId === chainId);
+      if (!network) return null;
 
-      if (value === 0) return "0";
-      if (value < 0.000001) return "< 0.000001";
-      if (value < 1) return value.toFixed(6);
-      if (value < 1000) return value.toFixed(4);
-      if (value < 1000000) return (value / 1000).toFixed(2) + "K";
+      const balance = await provider.getBalance(walletAddress);
+      const balanceStr = balance.toString();
+      const formattedBalance = formatTokenAmount(balanceStr, network.nativeToken.decimals);
 
-      return (value / 1000000).toFixed(2) + "M";
+      return {
+        token: {
+          address: network.nativeToken.address,
+          symbol: network.nativeToken.symbol,
+          name: network.nativeToken.name,
+          decimals: network.nativeToken.decimals,
+          logoURI: network.logoUrl
+        },
+        balance: balanceStr,
+        formattedBalance
+      };
     } catch (error) {
-      console.error(`Error formatting balance for ${symbol}:`, error);
-      return "0";
+      console.error(`Failed to get native balance for chain ${chainId}:`, error);
+      return null;
     }
   }, []);
 
-  // Fetch Ethereum balances using Alchemy SDK
-  const fetchEthereumBalances = useCallback(async () => {
-    if (!ethereum.wallet.isConnected || !ethereum.wallet.address) {
-      setBalances(prev => ({
-        ...prev,
-        ethereum: {
-          native: null,
-          tokens: [],
-          loading: false,
-          error: null,
-        },
-      }));
-      return;
-    }
-
-    const alchemy = initAlchemy();
-    if (!alchemy) {
-      setBalances(prev => ({
-        ...prev,
-        ethereum: {
-          ...prev.ethereum,
-          error: "Alchemy API key not configured",
-          loading: false,
-        },
-      }));
-      return;
-    }
-
-    setBalances(prev => ({
-      ...prev,
-      ethereum: { ...prev.ethereum, loading: true, error: null },
-    }));
-
+  // Get ERC20 token balance
+  const getERC20Balance = useCallback(async (
+    token: Token,
+    walletAddress: string,
+    provider: ethers.JsonRpcProvider
+  ): Promise<TokenBalance | null> => {
     try {
-      const address = ethereum.wallet.address;
+      const contract = new ethers.Contract(token.address, ERC20_ABI, provider);
+      const balance = await contract.balanceOf(walletAddress);
+      const balanceStr = balance.toString();
+      const formattedBalance = formatTokenAmount(balanceStr, token.decimals);
 
-      // Fetch native ETH balance using Alchemy SDK
-      const ethBalance = await alchemy.core.getBalance(address);
-
-      // Fetch ERC-20 token balances using Alchemy SDK
-      const tokenBalances = await alchemy.core.getTokenBalances(address);
-
-      // Format native ETH balance
-      const nativeBalance: TokenBalance = {
-        symbol: "ETH",
-        name: "Ethereum",
-        address: "0x0000000000000000000000000000000000000000",
-        balance: ethBalance.toString(),
-        formattedBalance: formatBalance(ethBalance.toString(), 18, "ETH"),
-        decimals: 18,
+      return {
+        token,
+        balance: balanceStr,
+        formattedBalance
       };
-
-      // Format token balances
-      const formattedTokens: TokenBalance[] = [];
-
-      for (const token of tokenBalances.tokenBalances) {
-        if (token.error || !token.tokenBalance || token.tokenBalance === "0x0") {
-          continue;
-        }
-
-        try {
-          // Fetch token metadata using Alchemy SDK
-          const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
-
-          if (metadata && metadata.decimals !== null) {
-            const balance = parseInt(token.tokenBalance, 16).toString();
-
-            formattedTokens.push({
-              symbol: metadata.symbol || "UNKNOWN",
-              name: metadata.name || "Unknown Token",
-              address: token.contractAddress,
-              balance,
-              formattedBalance: formatBalance(balance, metadata.decimals, metadata.symbol || "UNKNOWN"),
-              decimals: metadata.decimals,
-              logo: metadata.logo,
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching metadata for token ${token.contractAddress}:`, error);
-        }
-      }
-
-      setBalances(prev => ({
-        ...prev,
-        ethereum: {
-          native: nativeBalance,
-          tokens: formattedTokens,
-          loading: false,
-          error: null,
-        },
-      }));
-    } catch (error: any) {
-      console.error("Error fetching Ethereum balances:", error);
-      setBalances(prev => ({
-        ...prev,
-        ethereum: {
-          ...prev.ethereum,
-          loading: false,
-          error: error.message || "Failed to fetch Ethereum balances",
-        },
-      }));
+    } catch (error) {
+      console.error(`Failed to get balance for token ${token.symbol}:`, error);
+      return null;
     }
-  }, [ethereum.wallet.isConnected, ethereum.wallet.address, formatBalance]);
+  }, []);
 
-  // Fetch Sui balances using Sui SDK
-  const fetchSuiBalances = useCallback(async () => {
-    if (!sui.connected || !sui.account?.address) {
-      setBalances(prev => ({
-        ...prev,
-        sui: {
-          native: null,
-          tokens: [],
-          loading: false,
-          error: null,
-        },
-      }));
+  // Refresh balances for specific chain or all chains
+  const refreshBalances = useCallback(async (chainId?: number) => {
+    if (!ethereum.wallet.isConnected || !ethereum.wallet.address) {
+      setBalances({});
       return;
     }
 
-    setBalances(prev => ({
-      ...prev,
-      sui: { ...prev.sui, loading: true, error: null },
-    }));
+    setIsLoading(true);
+    setError(null);
 
     try {
-      const suiClient = initSuiClient();
-      const address = sui.account.address;
+      const chainsToUpdate = chainId
+        ? [chainId]
+        : Object.values(SUPPORTED_NETWORKS).map(n => n.chainId);
 
-      // Fetch all coin balances for the address
-      const coinBalances = await suiClient.getAllBalances({
-        owner: address,
-      });
+      const newBalances = { ...balances };
 
-      const formattedBalances: TokenBalance[] = [];
-      let nativeBalance: TokenBalance | null = null;
+      for (const targetChainId of chainsToUpdate) {
+        const provider = getProvider(targetChainId);
+        if (!provider) continue;
 
-      for (const coin of coinBalances) {
-        try {
-          // Fetch coin metadata
-          const coinMetadata = await suiClient.getCoinMetadata({
-            coinType: coin.coinType,
-          });
+        const chainBalances: TokenBalance[] = [];
 
-          const balance = coin.totalBalance;
-          const decimals = coinMetadata?.decimals || 9;
-          const symbol = coinMetadata?.symbol || "UNKNOWN";
-          const name = coinMetadata?.name || "Unknown Coin";
+        // Get native token balance
+        const nativeBalance = await getNativeBalance(targetChainId, ethereum.wallet.address, provider);
+        if (nativeBalance) {
+          chainBalances.push(nativeBalance);
+        }
 
-          const tokenBalance: TokenBalance = {
-            symbol,
-            name,
-            address: coin.coinType,
-            balance,
-            formattedBalance: formatBalance(balance, decimals, symbol),
-            decimals,
-            logo: coinMetadata?.iconUrl,
-          };
+        // For now, we'll focus on native tokens and major stablecoins
+        // In production, you'd fetch all tokens from 1inch API and check balances
+        const majorTokens: Partial<Record<number, Token[]>> = {
+          1: [ // Ethereum
+            {
+              address: '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+              symbol: 'USDC',
+              name: 'USD Coin',
+              decimals: 6,
+              logoURI: 'https://tokens.1inch.io/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48.png'
+            },
+            {
+              address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+              symbol: 'USDT',
+              name: 'Tether USD',
+              decimals: 6,
+              logoURI: 'https://tokens.1inch.io/0xdac17f958d2ee523a2206206994597c13d831ec7.png'
+            }
+          ],
+          42161: [ // Arbitrum
+            {
+              address: '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
+              symbol: 'USDC.e',
+              name: 'USD Coin (Arb1)',
+              decimals: 6,
+              logoURI: 'https://tokens.1inch.io/0xff970a61a04b1ca14834a43f5de4533ebddb5cc8.png'
+            },
+            {
+              address: '0x912CE59144191C1204E64559FE8253a0e49E6548',
+              symbol: 'ARB',
+              name: 'Arbitrum',
+              decimals: 18,
+              logoURI: 'https://tokens.1inch.io/0x912ce59144191c1204e64559fe8253a0e49e6548.png'
+            }
+          ]
+        };
 
-          // Check if this is native SUI
-          if (coin.coinType === "0x2::sui::SUI") {
-            nativeBalance = tokenBalance;
-          } else {
-            formattedBalances.push(tokenBalance);
-          }
-        } catch (error) {
-          console.error(`Error fetching metadata for coin ${coin.coinType}:`, error);
-
-          // Add with basic info if metadata fetch fails
-          const tokenBalance: TokenBalance = {
-            symbol: "UNKNOWN",
-            name: "Unknown Coin",
-            address: coin.coinType,
-            balance: coin.totalBalance,
-            formattedBalance: formatBalance(coin.totalBalance, 9, "UNKNOWN"),
-            decimals: 9,
-          };
-
-          if (coin.coinType === "0x2::sui::SUI") {
-            nativeBalance = { ...tokenBalance, symbol: "SUI", name: "Sui" };
-          } else {
-            formattedBalances.push(tokenBalance);
+        const tokens = majorTokens[targetChainId] || [];
+        for (const token of tokens) {
+          const balance = await getERC20Balance(token, ethereum.wallet.address, provider);
+          if (balance && parseFloat(balance.balance) > 0) {
+            chainBalances.push(balance);
           }
         }
+
+        newBalances[targetChainId.toString()] = chainBalances;
       }
 
-      setBalances(prev => ({
-        ...prev,
-        sui: {
-          native: nativeBalance,
-          tokens: formattedBalances,
-          loading: false,
-          error: null,
-        },
-      }));
-    } catch (error: any) {
-      console.error("Error fetching Sui balances:", error);
-      setBalances(prev => ({
-        ...prev,
-        sui: {
-          ...prev.sui,
-          loading: false,
-          error: error.message || "Failed to fetch Sui balances",
-        },
-      }));
+      setBalances(newBalances);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch balances');
+    } finally {
+      setIsLoading(false);
     }
-  }, [sui.connected, sui.account?.address, formatBalance]);
+  }, [ethereum.wallet.isConnected, ethereum.wallet.address, getProvider, getNativeBalance, getERC20Balance]);
 
-  // Refresh all balances
-  const refreshBalances = useCallback(async () => {
-    await Promise.all([
-      fetchEthereumBalances(),
-      fetchSuiBalances(),
-    ]);
-  }, [fetchEthereumBalances, fetchSuiBalances]);
+  // Get specific token balance
+  const getTokenBalance = useCallback((chainId: number, tokenAddress: string): TokenBalance | null => {
+    const chainBalances = balances[chainId.toString()] || [];
+    return chainBalances.find(b => b.token.address.toLowerCase() === tokenAddress.toLowerCase()) || null;
+  }, [balances]);
 
-  // Fetch balances when wallet connections change
+  // Get native token balance for chain
+  const getNativeBalanceForChain = useCallback((chainId: number): TokenBalance | null => {
+    const network = Object.values(SUPPORTED_NETWORKS).find(n => n.chainId === chainId);
+    if (!network) return null;
+
+    return getTokenBalance(chainId, network.nativeToken.address);
+  }, [getTokenBalance]);
+
+  // Auto-refresh when wallet connects
   useEffect(() => {
-    fetchEthereumBalances();
-  }, [fetchEthereumBalances]);
-
-  useEffect(() => {
-    fetchSuiBalances();
-  }, [fetchSuiBalances]);
-
-  // Auto-refresh balances every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(refreshBalances, 30000);
-    return () => clearInterval(interval);
-  }, [refreshBalances]);
+    if (ethereum.wallet.isConnected && ethereum.wallet.address) {
+      refreshBalances();
+    } else {
+      setBalances({});
+    }
+  }, [ethereum.wallet.isConnected, ethereum.wallet.address]);
 
   return {
     balances,
+    isLoading,
+    error,
     refreshBalances,
-    isLoading: balances.ethereum.loading || balances.sui.loading,
-    hasErrors: Boolean(balances.ethereum.error || balances.sui.error),
+    getTokenBalance,
+    getNativeBalance: getNativeBalanceForChain
   };
 }

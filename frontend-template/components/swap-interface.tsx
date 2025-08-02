@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useManteiaWallet } from "@/providers/manteia-wallet-provider";
-import { useManteiaApi } from "@/hooks/use-manteia-api";
+import { useOneInchService } from "@/hooks/use-1inch-service";
+import { useWalletBalances } from "@/hooks/use-wallet-balances";
+import { SUPPORTED_NETWORKS, Token, formatTokenAmount, parseTokenAmount } from "@/lib/networks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowUpDown,
   ArrowDown,
@@ -21,7 +24,8 @@ import {
   TrendingUp,
   AlertTriangle,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Wallet
 } from "lucide-react";
 
 /**
@@ -32,22 +36,8 @@ import {
  * @see https://magma-finance-1.gitbook.io/magma-finance/product/clmm/fees
  */
 
-// Token definitions based on Magma and 1inch supported assets
-const SUPPORTED_TOKENS = {
-  ethereum: [
-    { symbol: "ETH", name: "Ethereum", address: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", decimals: 18 },
-    { symbol: "USDC", name: "USD Coin", address: "0xa0b86a33e6329c8a4e66e8c7e4b4b5486f9db11e", decimals: 6 },
-    { symbol: "USDT", name: "Tether USD", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
-    { symbol: "WBTC", name: "Wrapped Bitcoin", address: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", decimals: 8 },
-    { symbol: "DAI", name: "Dai Stablecoin", address: "0x6b175474e89094c44da98b954eedeac495271d0f", decimals: 18 },
-  ],
-  sui: [
-    { symbol: "SUI", name: "Sui", address: "0x2::sui::SUI", decimals: 9 },
-    { symbol: "USDC", name: "USD Coin", address: "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN", decimals: 6 },
-    { symbol: "WETH", name: "Wrapped Ethereum", address: "0xaf8cd5edc19c4512f4259f0bee101a40d41ebed738ade5874359610ef8eeced5::coin::COIN", decimals: 8 },
-    { symbol: "CETUS", name: "Cetus Protocol", address: "0x06864a6f921804860930db6ddbe2e16acdf8504495ea7481637a1c8b9a8fe54b::cetus::CETUS", decimals: 9 },
-  ]
-};
+// Popular tokens that we'll show by default (fetched from 1inch API)
+const DEFAULT_TOKENS_TO_SHOW = ['ETH', 'USDC', 'USDT', 'WBTC', 'DAI', 'WETH', 'UNI', 'LINK', 'ARB', 'OP', 'MATIC', 'AVAX'];
 
 // Magma's fee tiers as specified in their documentation
 const FEE_TIERS = [
@@ -57,60 +47,75 @@ const FEE_TIERS = [
   { value: "1.00", label: "Best for exotic pairs", rate: 0.01, description: "High volatility pairs" }
 ];
 
-interface SwapQuote {
-  fromAmount: string;
-  toAmount: string;
-  priceImpact: number;
-  estimatedGas: string;
-  route: any[];
-  feeTier: string;
-  minimumReceived: string;
-}
-
 interface SwapInterfaceProps {
-  defaultFromChain?: "ethereum" | "sui";
-  defaultToChain?: "ethereum" | "sui";
+  defaultNetwork?: keyof typeof SUPPORTED_NETWORKS;
 }
 
-export function SwapInterface({ defaultFromChain = "ethereum", defaultToChain = "sui" }: SwapInterfaceProps) {
-  const { sui, ethereum, areBothWalletsConnected } = useManteiaWallet();
-  const { getSwapQuote } = useManteiaApi();
+export function SwapInterface({ defaultNetwork = "ethereum" }: SwapInterfaceProps) {
+  const { ethereum } = useManteiaWallet();
+  const oneInchService = useOneInchService();
+  const { balances, getTokenBalance, refreshBalances } = useWalletBalances();
 
   // Swap state
-  const [fromChain, setFromChain] = useState<"ethereum" | "sui">(defaultFromChain);
-  const [toChain, setToChain] = useState<"ethereum" | "sui">(defaultToChain);
-  const [fromToken, setFromToken] = useState(SUPPORTED_TOKENS[fromChain][0]);
-  const [toToken, setToToken] = useState(SUPPORTED_TOKENS[toChain][0]);
+  const [selectedNetwork, setSelectedNetwork] = useState<keyof typeof SUPPORTED_NETWORKS>(defaultNetwork);
+  const [availableTokens, setAvailableTokens] = useState<Record<string, Token>>({});
+  const [popularTokens, setPopularTokens] = useState<Token[]>([]);
+  const [fromToken, setFromToken] = useState<Token | null>(null);
+  const [toToken, setToToken] = useState<Token | null>(null);
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("");
   const [slippageTolerance, setSlippageTolerance] = useState("0.5");
-  const [selectedFeeTier, setSelectedFeeTier] = useState(FEE_TIERS[2]); // Default to 0.25%
-  const [isLoadingQuote, setIsLoadingQuote] = useState(false);
-  const [quote, setQuote] = useState<SwapQuote | null>(null);
+  const [quote, setQuote] = useState<any>(null);
   const [swapMode, setSwapMode] = useState<"market" | "limit">("market");
-  const [useAggregator, setUseAggregator] = useState(true);
 
   // Advanced settings
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [deadline, setDeadline] = useState("20"); // minutes
-  const [partialFillsEnabled, setPartialFillsEnabled] = useState(false);
 
-  // Determine if this is a cross-chain swap
-  const isCrossChain = fromChain !== toChain;
+  // Get current network config
+  const currentNetwork = SUPPORTED_NETWORKS[selectedNetwork];
+  const currentChainId = currentNetwork.chainId;
 
-  // Get available tokens for selected chains
-  const fromTokens = SUPPORTED_TOKENS[fromChain];
-  const toTokens = SUPPORTED_TOKENS[toChain];
-
-  // Auto-update token selections when chains change
+  // Load tokens when network changes
   useEffect(() => {
-    setFromToken(fromTokens[0]);
-    setToToken(toTokens[0]);
-  }, [fromChain, toChain]);
+    const loadTokens = async () => {
+      try {
+        const tokens = await oneInchService.getTokens(currentChainId);
+        setAvailableTokens(tokens);
+
+        // Filter popular tokens
+        const popular = Object.values(tokens).filter(token =>
+          DEFAULT_TOKENS_TO_SHOW.includes(token.symbol)
+        ).slice(0, 10);
+
+        setPopularTokens(popular);
+
+        // Set default from token (native token)
+        const nativeToken = Object.values(tokens).find(t =>
+          t.address.toLowerCase() === currentNetwork.nativeToken.address.toLowerCase()
+        );
+        if (nativeToken && !fromToken) {
+          setFromToken(nativeToken);
+        }
+
+        // Set default to token (USDC if available)
+        if (!toToken) {
+          const usdcToken = Object.values(tokens).find(t => t.symbol === 'USDC');
+          if (usdcToken) {
+            setToToken(usdcToken);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load tokens:', error);
+      }
+    };
+
+    loadTokens();
+  }, [currentChainId, oneInchService]);
 
   // Calculate quote when parameters change
   useEffect(() => {
-    if (fromAmount && parseFloat(fromAmount) > 0 && fromToken && toToken) {
+    if (fromAmount && parseFloat(fromAmount) > 0 && fromToken && toToken && fromToken.address !== toToken.address) {
       const delayedQuote = setTimeout(() => {
         fetchQuote();
       }, 500); // Debounce API calls
@@ -120,87 +125,90 @@ export function SwapInterface({ defaultFromChain = "ethereum", defaultToChain = 
       setQuote(null);
       setToAmount("");
     }
-  }, [fromAmount, fromToken, toToken, fromChain, toChain, selectedFeeTier, slippageTolerance]);
+  }, [fromAmount, fromToken, toToken, slippageTolerance]);
 
   const fetchQuote = async () => {
     if (!fromAmount || !fromToken || !toToken) return;
 
-    setIsLoadingQuote(true);
     try {
-      const { data } = await getSwapQuote({
-        fromToken: fromToken.address,
-        toToken: toToken.address,
-        amount: fromAmount,
-        fromChain,
-        toChain,
-        slippage: parseFloat(slippageTolerance)
+      // Convert amount to smallest unit
+      const amountInSmallestUnit = parseTokenAmount(fromAmount, fromToken.decimals);
+
+      const quoteData = await oneInchService.getQuote({
+        chainId: currentChainId,
+        src: fromToken.address,
+        dst: toToken.address,
+        amount: amountInSmallestUnit
       });
 
-      if (data) {
-        setQuote(data.quote);
-        setToAmount(data.quote.toAmount);
+      if (quoteData.dstAmount) {
+        setQuote(quoteData);
+        const formattedAmount = formatTokenAmount(quoteData.dstAmount, toToken.decimals);
+        setToAmount(formattedAmount);
       }
     } catch (error) {
       console.error("Failed to fetch quote:", error);
-    } finally {
-      setIsLoadingQuote(false);
+      setQuote(null);
+      setToAmount("");
     }
   };
 
   // Handle token swap (flip from/to)
   const handleSwapTokens = () => {
-    // Swap chains
-    const tempChain = fromChain;
-    setFromChain(toChain);
-    setToChain(tempChain);
+    if (!fromToken || !toToken) return;
 
     // Swap tokens
     const tempToken = fromToken;
     setFromToken(toToken);
     setToToken(tempToken);
 
-    // Swap amounts
-    const tempAmount = fromAmount;
-    setFromAmount(toAmount);
-    setToAmount(tempAmount);
+    // Clear amounts to trigger new quote
+    setFromAmount("");
+    setToAmount("");
+    setQuote(null);
   };
 
-  // Calculate price impact color
-  const getPriceImpactColor = (impact: number) => {
-    if (impact < 1) return "text-green-600 dark:text-green-400";
-    if (impact < 3) return "text-yellow-600 dark:text-yellow-400";
-    return "text-red-600 dark:text-red-400";
-  };
-
-  // Format percentage
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
+  // Get wallet balance for selected token
+  const getFromTokenBalance = () => {
+    if (!fromToken) return null;
+    return getTokenBalance(currentChainId, fromToken.address);
   };
 
   // Check if user can execute swap
   const canExecuteSwap = useMemo(() => {
-    if (!fromAmount || !toAmount || !quote) return false;
-    if (isCrossChain && !areBothWalletsConnected) return false;
-    if (!isCrossChain && fromChain === "ethereum" && !ethereum.wallet.isConnected) return false;
-    if (!isCrossChain && fromChain === "sui" && !sui.connected) return false;
+    if (!fromAmount || !toAmount || !quote || !fromToken || !toToken) return false;
+    if (!ethereum.wallet.isConnected) return false;
+
+    // Check if user has sufficient balance
+    const balance = getFromTokenBalance();
+    if (balance) {
+      const balanceNum = parseFloat(balance.formattedBalance);
+      const amountNum = parseFloat(fromAmount);
+      if (balanceNum < amountNum) return false;
+    }
+
     return true;
-  }, [fromAmount, toAmount, quote, isCrossChain, areBothWalletsConnected, ethereum.wallet.isConnected, sui.connected]);
+  }, [fromAmount, toAmount, quote, fromToken, toToken, ethereum.wallet.isConnected, getFromTokenBalance]);
 
   const executeSwap = async () => {
-    if (!canExecuteSwap || !quote) return;
+    if (!canExecuteSwap || !quote || !fromToken || !toToken || !ethereum.wallet.address) return;
 
     try {
-      // Implementation will be added in next step - integrate with backend API
-      console.log("Executing swap:", {
-        fromChain,
-        toChain,
-        fromToken,
-        toToken,
-        fromAmount,
-        quote,
-        slippageTolerance,
-        feeTier: selectedFeeTier
+      // Convert amount to smallest unit
+      const amountInSmallestUnit = parseTokenAmount(fromAmount, fromToken.decimals);
+
+      const swapData = await oneInchService.buildSwap({
+        chainId: currentChainId,
+        src: fromToken.address,
+        dst: toToken.address,
+        amount: amountInSmallestUnit,
+        from: ethereum.wallet.address,
+        slippage: parseFloat(slippageTolerance)
       });
+
+      console.log("Swap transaction ready:", swapData);
+      // Here you would execute the transaction using the wallet
+      // For now, just log the transaction data
     } catch (error) {
       console.error("Swap execution failed:", error);
     }
@@ -216,23 +224,41 @@ export function SwapInterface({ defaultFromChain = "ethereum", defaultToChain = 
               <CardTitle className="flex items-center gap-2">
                 <ArrowUpDown className="h-5 w-5" />
                 Swap
-                {isCrossChain && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                    Cross-chain
-                  </Badge>
-                )}
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  {currentNetwork.name}
+                </Badge>
               </CardTitle>
               <CardDescription>
-                {isCrossChain ? "Atomic cross-chain swaps powered by 1inch Fusion+" : "Trade tokens with best pricing"}
+                Trade tokens on {currentNetwork.name} with best pricing from 1inch
               </CardDescription>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={selectedNetwork} onValueChange={(value) => setSelectedNetwork(value as any)}>
+                <SelectTrigger className="w-auto">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SUPPORTED_NETWORKS).map(([key, network]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={network.logoUrl} alt={network.name} />
+                          <AvatarFallback>{network.symbol}</AvatarFallback>
+                        </Avatar>
+                        {network.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
 

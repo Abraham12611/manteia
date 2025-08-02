@@ -1,9 +1,9 @@
 "use client";
 
-import { CrossChainSwapInterface } from "@/components/cross-chain-swap-interface";
+import { OneInchSwapInterface } from "@/components/one-inch-swap-interface";
 import { SwapHistory } from "@/components/swap-history";
 import { WalletStatusDisplay } from "@/components/wallet-status-display";
-import { WalletBalanceDisplay } from "@/components/wallet-balance-display";
+import { MultiNetworkWalletBalance } from "@/components/multi-network-wallet-balance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ export default function SwapPage() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold">Swap</h1>
               <p className="text-sm text-muted-foreground">
-                Trade tokens across Ethereum and Sui with best execution
+                Trade tokens across multiple networks with best execution from 1inch
               </p>
             </div>
             <WalletStatusDisplay />
@@ -47,8 +47,8 @@ export default function SwapPage() {
         <div className="flex max-lg:flex-col flex-1 gap-6 py-6 w-full max-w-7xl mx-auto">
           {/* Main Swap Interface */}
           <div className="lg:flex-1 space-y-6">
-            {/* Cross-Chain Swap Component */}
-            <CrossChainSwapInterface />
+            {/* 1inch Swap Interface */}
+            <OneInchSwapInterface />
 
             {/* Features Highlight */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -73,8 +73,8 @@ export default function SwapPage() {
                       <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <p className="font-medium">Cross-Chain</p>
-                      <p className="text-sm text-muted-foreground">Ethereum ↔ Sui atomic swaps</p>
+                      <p className="font-medium">Multi-Network</p>
+                      <p className="text-sm text-muted-foreground">8+ networks including Ethereum, Arbitrum, Polygon</p>
                     </div>
                   </div>
                 </CardContent>
@@ -87,8 +87,8 @@ export default function SwapPage() {
                       <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <p className="font-medium">Trustless</p>
-                      <p className="text-sm text-muted-foreground">Wormhole + 1inch security</p>
+                      <p className="font-medium">Secure</p>
+                      <p className="text-sm text-muted-foreground">1inch DEX aggregator security</p>
                     </div>
                   </div>
                 </CardContent>
@@ -197,12 +197,12 @@ export default function SwapPage() {
               </CardContent>
             </Card>
 
-            {/* Cross-Chain Info */}
+            {/* 1inch Technology Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Cross-Chain Technology</CardTitle>
+                <CardTitle className="text-lg">1inch DEX Aggregator</CardTitle>
                 <CardDescription>
-                  Powered by 1inch, Wormhole, and Cetus DEX
+                  Advanced routing for optimal swap rates
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -210,24 +210,24 @@ export default function SwapPage() {
                   <div className="flex items-center gap-3">
                     <Timer className="h-4 w-4 text-blue-500" />
                     <div>
-                      <p className="text-sm font-medium">Fast Execution</p>
-                      <p className="text-xs text-muted-foreground">~5-10 minute settlement</p>
+                      <p className="text-sm font-medium">Instant Quotes</p>
+                      <p className="text-xs text-muted-foreground">Real-time pricing from 100+ DEXes</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <Shield className="h-4 w-4 text-green-500" />
                     <div>
-                      <p className="text-sm font-medium">Trustless</p>
-                      <p className="text-xs text-muted-foreground">No custodial risk</p>
+                      <p className="text-sm font-medium">Best Rates</p>
+                      <p className="text-xs text-muted-foreground">Optimized routing for minimal slippage</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <Activity className="h-4 w-4 text-purple-500" />
                     <div>
-                      <p className="text-sm font-medium">Atomic</p>
-                      <p className="text-xs text-muted-foreground">All-or-nothing execution</p>
+                      <p className="text-sm font-medium">Gas Efficient</p>
+                      <p className="text-xs text-muted-foreground">Smart contract optimization</p>
                     </div>
                   </div>
                 </div>
@@ -236,13 +236,13 @@ export default function SwapPage() {
 
                 <Button variant="outline" className="w-full justify-start" size="sm">
                   <ExternalLink className="h-3 w-3 mr-2" />
-                  Learn about our technology
+                  Learn about 1inch Protocol
                 </Button>
               </CardContent>
             </Card>
 
                         {/* Wallet Balances */}
-            <WalletBalanceDisplay />
+            <MultiNetworkWalletBalance />
 
             {/* Swap History */}
             <SwapHistory limit={5} />
