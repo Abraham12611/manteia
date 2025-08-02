@@ -16,6 +16,7 @@ import orderRoutes from './routes/orders.js';
 import resolverRoutes from './routes/resolver.js';
 import healthRoutes from './routes/health.js';
 import crossChainSwapRoutes from './routes/crossChainSwap.js';
+import oneInchSwapRoutes from './routes/oneInchSwap.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -213,6 +214,9 @@ class ManteiaServer {
     // New cross-chain swap routes
     this.app.use('/api/swap', crossChainSwapRoutes);
 
+    // 1inch multi-network swap routes
+    this.app.use('/api/1inch', oneInchSwapRoutes);
+
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
@@ -224,7 +228,8 @@ class ManteiaServer {
           swap: '/api/v1/swap',
           orders: '/api/v1/orders',
           resolver: '/api/v1/resolver',
-          crossChainSwap: '/api/swap'
+          crossChainSwap: '/api/swap',
+          oneInchSwap: '/api/1inch'
         }
       });
     });
@@ -246,9 +251,10 @@ class ManteiaServer {
     try {
       await this.initialize();
 
-      const server = this.app.listen(this.port, () => {
+      const server = this.app.listen(this.port, '0.0.0.0', () => {
         this.logger.info(`Manteia backend server running on port ${this.port}`);
-        console.log(`🚀 Server ready at http://localhost:${this.port}`);
+        console.log(`🚀 Server ready at http://0.0.0.0:${this.port}`);
+        console.log(`🌐 External access: http://84.32.100.59:${this.port}`);
       });
 
       // Setup WebSocket server
