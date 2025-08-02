@@ -1,5 +1,11 @@
 import { ethers } from 'ethers';
 import axios from 'axios';
+import {
+  EnhancedTWAPStrategy,
+  BarrierOptionsStrategy,
+  DynamicDeltaHedgingStrategy,
+  CustomStrategyBuilder
+} from './enhancedStrategies.js';
 
 // Enhanced predicate types for advanced strategies
 export class PredicateBuilder {
@@ -149,114 +155,9 @@ export class ConcentratedLiquidityStrategy extends AdvancedStrategy {
   }
 }
 
-// Enhanced TWAP strategy with slippage protection
-export class EnhancedTWAPStrategy extends AdvancedStrategy {
-  constructor(params) {
-    super({
-      type: 'enhanced_twap',
-      ...params
-    });
 
-    this.intervals = params.intervals;
-    this.duration = params.duration;
-    this.slippageProtection = params.slippageProtection;
-    this.dynamicAdjustment = params.dynamicAdjustment;
-  }
 
-  async execute() {
-    const orders = [];
-    const amountPerInterval = Math.floor(this.execution.totalAmount / this.intervals);
-    const intervalDuration = Math.floor(this.duration / this.intervals);
 
-    for (let i = 0; i < this.intervals; i++) {
-      const startTime = Date.now() + (i * intervalDuration * 1000);
-      const endTime = startTime + (intervalDuration * 1000);
-
-      // Create enhanced predicate with slippage protection
-      const timePredicate = new PredicateBuilder().createTimePredicate(startTime, endTime);
-      const slippagePredicate = this.createSlippagePredicate();
-
-      const compoundPredicate = new PredicateBuilder().createCompoundPredicate([
-        { predicate: timePredicate, operator: 0 },
-        { predicate: slippagePredicate, operator: 0 }
-      ]);
-
-      const order = await this.createLimitOrder({
-        chainId: this.execution.chainId,
-        makerAsset: this.conditions.makerAsset,
-        takerAsset: this.conditions.takerAsset,
-        makingAmount: amountPerInterval.toString(),
-        takingAmount: '0',
-        maker: this.execution.maker,
-        predicate: compoundPredicate
-      });
-
-      orders.push(order);
-    }
-
-    return { orders, strategy: 'enhanced_twap' };
-  }
-
-  createSlippagePredicate() {
-    return new PredicateBuilder().createPricePredicate(
-      this.conditions.takerAsset,
-      this.slippageProtection.maxSlippage,
-      'call',
-      Date.now() + this.duration * 1000
-    );
-  }
-}
-
-// Multi-leg options strategy
-export class MultiLegOptionsStrategy extends AdvancedStrategy {
-  constructor(params) {
-    super({
-      type: 'multi_leg_options',
-      ...params
-    });
-
-    this.legs = params.legs; // Array of option legs
-    this.spreadType = params.spreadType; // 'vertical', 'horizontal', 'diagonal'
-    this.deltaHedging = params.deltaHedging;
-  }
-
-  async execute() {
-    const orders = [];
-
-    for (const leg of this.legs) {
-      const predicate = new PredicateBuilder().createPricePredicate(
-        leg.underlying,
-        leg.strikePrice,
-        leg.optionType,
-        leg.expiry
-      );
-
-      const order = await this.createLimitOrder({
-        chainId: this.execution.chainId,
-        makerAsset: leg.makerAsset,
-        takerAsset: leg.takerAsset,
-        makingAmount: leg.amount,
-        takingAmount: leg.strikePrice.toString(),
-        maker: this.execution.maker,
-        predicate,
-        interaction: this.createDeltaHedgingInteraction(leg)
-      });
-
-      orders.push(order);
-    }
-
-    return { orders, strategy: 'multi_leg_options', spreadType: this.spreadType };
-  }
-
-  createDeltaHedgingInteraction(leg) {
-    if (!this.deltaHedging.enabled) return '0x';
-
-    return this.abiCoder.encode(
-      ['uint256', 'uint256', 'uint8'],
-      [leg.delta, this.deltaHedging.rebalanceThreshold, leg.optionType === 'call' ? 1 : 0]
-    );
-  }
-}
 
 // Main Limit Order Service
 export class LimitOrderService {
@@ -314,34 +215,113 @@ export class LimitOrderService {
     }
   }
 
-  // Create multi-leg options order
+    // Create multi-leg options order (placeholder for future implementation)
   async createMultiLegOptionsOrder(params) {
     try {
-      const strategy = new MultiLegOptionsStrategy(params);
-      const result = await strategy.execute();
-
-      // Store strategy for monitoring
-      this.registerStrategy(result.orders[0].orderHash, strategy);
-
-      this.logger.info('Multi-leg options order created', {
-        orderCount: result.orders.length,
-        spreadType: result.spreadType
+      this.logger.info('Multi-leg options order requested (not implemented in Phase 2)', {
+        params
       });
 
-      return result;
+      throw new Error('Multi-leg options not implemented in Phase 2. Use barrier options instead.');
     } catch (error) {
       this.logger.error('Error creating multi-leg options order:', error);
       throw new Error(`Failed to create multi-leg options order: ${error.message}`);
     }
   }
 
-  // Create custom strategy order
+    // Create enhanced TWAP order with slippage protection
+  async createEnhancedTWAPOrder(params) {
+    try {
+      const strategy = new EnhancedTWAPStrategy(params);
+      const result = await strategy.execute(this);
+
+      // Store strategy for monitoring
+      this.registerStrategy(result.orders[0].orderHash, strategy);
+
+      this.logger.info('Enhanced TWAP order created', {
+        orderCount: result.orders.length,
+        dynamicIntervals: result.dynamicIntervals,
+        merkleRoot: result.merkleRoot
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error creating enhanced TWAP order:', error);
+      throw new Error(`Failed to create enhanced TWAP order: ${error.message}`);
+    }
+  }
+
+  // Create barrier options order
+  async createBarrierOptionsOrder(params) {
+    try {
+      const strategy = new BarrierOptionsStrategy(params);
+      const result = await strategy.execute(this);
+
+      // Store strategy for monitoring
+      this.registerStrategy(result.orders[0].orderHash, strategy);
+
+      this.logger.info('Barrier options order created', {
+        barrierType: result.barrierType,
+        barrierLevel: result.barrierLevel,
+        orderCount: result.orders.length
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error creating barrier options order:', error);
+      throw new Error(`Failed to create barrier options order: ${error.message}`);
+    }
+  }
+
+  // Create dynamic delta hedging order
+  async createDynamicDeltaHedgingOrder(params) {
+    try {
+      const strategy = new DynamicDeltaHedgingStrategy(params);
+      const result = await strategy.execute(this);
+
+      // Store strategy for monitoring
+      this.registerStrategy(result.orders[0].orderHash, strategy);
+
+      this.logger.info('Dynamic delta hedging order created', {
+        initialDelta: result.initialDelta,
+        targetDelta: result.targetDelta,
+        orderCount: result.orders.length
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error creating dynamic delta hedging order:', error);
+      throw new Error(`Failed to create dynamic delta hedging order: ${error.message}`);
+    }
+  }
+
+  // Create custom strategy order using builder
   async createCustomStrategyOrder(params) {
     try {
-      const strategy = new AdvancedStrategy(params);
-      const result = await strategy.execute();
+      const builder = new CustomStrategyBuilder();
+      const strategyConfig = builder.buildStrategy(params.config);
 
-      this.registerStrategy(result.orderHash, strategy);
+      // Create order with custom predicates and interactions
+      const order = await this.createLimitOrder({
+        chainId: params.chainId,
+        makerAsset: params.makerAsset,
+        takerAsset: params.takerAsset,
+        makingAmount: params.amount,
+        takingAmount: '0',
+        maker: params.maker,
+        predicate: strategyConfig.predicates[0]?.predicate || '0x',
+        interaction: strategyConfig.interactions[0] || '0x',
+        salt: ethers.randomBytes(32)
+      });
+
+      const result = {
+        orderHash: order.orderHash,
+        strategy: 'custom',
+        config: strategyConfig,
+        metadata: params.metadata
+      };
+
+      this.registerStrategy(result.orderHash, { type: 'custom', config: strategyConfig });
 
       this.logger.info('Custom strategy order created', {
         type: params.type,

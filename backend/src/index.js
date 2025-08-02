@@ -19,6 +19,7 @@ import healthRoutes from './routes/health.js';
 import crossChainSwapRoutes from './routes/crossChainSwap.js';
 import oneInchSwapRoutes from './routes/oneInchSwap.js';
 import limitOrderRoutes from './routes/limitOrders.js';
+import enhancedStrategiesRoutes from './routes/enhancedStrategies.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -230,6 +231,9 @@ class ManteiaServer {
     // Enhanced limit order routes
     this.app.use('/api/limit-orders', limitOrderRoutes);
 
+    // Enhanced strategies routes
+    this.app.use('/api/enhanced-strategies', enhancedStrategiesRoutes);
+
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
@@ -243,7 +247,8 @@ class ManteiaServer {
           resolver: '/api/v1/resolver',
           crossChainSwap: '/api/swap',
           oneInchSwap: '/api/1inch',
-          limitOrders: '/api/limit-orders'
+          limitOrders: '/api/limit-orders',
+          enhancedStrategies: '/api/enhanced-strategies'
         }
       });
     });
