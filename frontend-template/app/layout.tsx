@@ -2,6 +2,7 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "../providers/theme-provider";
 import { ManteiaWalletProvider } from "../providers/manteia-wallet-provider";
+import { StagewiseWrapper } from "../components/stagewise-wrapper";
 import "@suiet/wallet-kit/style.css";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
+            <StagewiseWrapper />
           </ThemeProvider>
         </ManteiaWalletProvider>
       </body>

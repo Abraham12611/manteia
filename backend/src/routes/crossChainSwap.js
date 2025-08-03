@@ -156,8 +156,11 @@ router.post('/execute', async (req, res) => {
     // Execute the appropriate swap flow
     let swapResult;
     if (fromChain === 'ethereum' && toChain === 'sui') {
+      // Convert ETH amount to wei for execution
+      const ethAmountInWei = service.convertToWei(amount, fromToken);
+
       swapResult = await service.executeETHToSUISwap({
-        ethAmount: amount,
+        ethAmount: ethAmountInWei,
         fromAddress,
         toAddress,
         slippage: slippage || 0.5,
@@ -166,8 +169,11 @@ router.post('/execute', async (req, res) => {
         suiSigner: null  // Placeholder - actual signing handled by frontend
       });
     } else if (fromChain === 'sui' && toChain === 'ethereum') {
+      // Convert SUI amount to smallest units for execution (assuming 9 decimals)
+      const suiAmountInUnits = (parseFloat(amount) * 1e9).toFixed(0);
+
       swapResult = await service.executeSUIToETHSwap({
-        suiAmount: amount,
+        suiAmount: suiAmountInUnits,
         fromAddress,
         toAddress,
         slippage: slippage || 0.5,

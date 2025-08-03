@@ -1,0 +1,17 @@
+{
+  "name": "1inch-cli-tester",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "CLI tool for testing 1inch swaps",
+  "main": "test-1inch-swap.js",
+  "scripts": {
+    "test": "node test-1inch-swap.js"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "node-fetch": "^3.3.2"
+  },
+  "keywords": ["1inch", "swap", "ethereum", "defi"],
+  "author": "",
+  "license": "MIT"
+}
