@@ -38,7 +38,11 @@ const searchTokensSchema = Joi.object({
 // Validation middleware
 function validateRequest(schema) {
   return (req, res, next) => {
-    const dataToValidate = req.method === 'GET' ? req.query : req.body;
+    // For routes with path parameters, combine params with query/body
+    const dataToValidate = {
+      ...req.params,
+      ...(req.method === 'GET' ? req.query : req.body)
+    };
     const { error, value } = schema.validate(dataToValidate);
     if (error) {
       return res.status(400).json({

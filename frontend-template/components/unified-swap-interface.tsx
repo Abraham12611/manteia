@@ -49,6 +49,7 @@ export function UnifiedSwapInterface({
     isLoading,
     error,
     quote,
+    clearQuote,
     supportedChains,
     tokensByChain,
     popularTokensByChain,
@@ -99,7 +100,7 @@ export function UnifiedSwapInterface({
         // Reset tokens and quote
         setFromToken(null);
         setToToken(null);
-        setQuote(null);
+        clearQuote();
         setToAmount("");
 
         // Load tokens for both chains
@@ -160,7 +161,7 @@ export function UnifiedSwapInterface({
   // Get quote when parameters change
   useEffect(() => {
     if (!fromToken || !toToken || !fromAmount || parseFloat(fromAmount) <= 0) {
-      setQuote(null);
+      clearQuote();
       setToAmount("");
       return;
     }
@@ -246,7 +247,7 @@ export function UnifiedSwapInterface({
         setExecutionProgress(0);
         setFromAmount("");
         setToAmount("");
-        setQuote(null);
+        clearQuote();
       }, 2000);
 
     } catch (error) {
@@ -276,7 +277,7 @@ export function UnifiedSwapInterface({
 
   // Get available tokens for display
   const getAvailableTokens = (chain: string) => {
-    return tokensByChain[chain] || {};
+    return tokensByChain[chain] || [];
   };
 
   const getPopularTokens = (chain: string) => {
@@ -345,10 +346,10 @@ export function UnifiedSwapInterface({
                 </SelectTrigger>
                 <SelectContent>
                   {supportedChains.map((chain) => (
-                    <SelectItem key={chain} value={chain}>
+                    <SelectItem key={chain.id} value={chain.id}>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full bg-blue-500" />
-                        {chain.charAt(0).toUpperCase() + chain.slice(1)}
+                        {chain.name.charAt(0).toUpperCase() + chain.name.slice(1)}
                       </div>
                     </SelectItem>
                   ))}
@@ -365,10 +366,10 @@ export function UnifiedSwapInterface({
                 </SelectTrigger>
                 <SelectContent>
                   {supportedChains.map((chain) => (
-                    <SelectItem key={chain} value={chain}>
+                    <SelectItem key={chain.id} value={chain.id}>
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full bg-green-500" />
-                        {chain.charAt(0).toUpperCase() + chain.slice(1)}
+                        {chain.name.charAt(0).toUpperCase() + chain.name.slice(1)}
                       </div>
                     </SelectItem>
                   ))}
@@ -412,7 +413,8 @@ export function UnifiedSwapInterface({
                   value={fromToken?.address || ""}
                   onValueChange={(value) => {
                     const tokens = getAvailableTokens(fromChain);
-                    setFromToken(tokens[value] || null);
+                    const selectedToken = tokens.find(token => token.address === value);
+                    setFromToken(selectedToken || null);
                   }}
                   disabled={isExecuting}
                 >
@@ -434,7 +436,7 @@ export function UnifiedSwapInterface({
                     ))}
                     <Separator />
                     {/* All tokens */}
-                    {Object.values(getAvailableTokens(fromChain)).map((token) => (
+                    {getAvailableTokens(fromChain).map((token) => (
                       <SelectItem key={token.address} value={token.address}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
@@ -482,7 +484,8 @@ export function UnifiedSwapInterface({
                   value={toToken?.address || ""}
                   onValueChange={(value) => {
                     const tokens = getAvailableTokens(toChain);
-                    setToToken(tokens[value] || null);
+                    const selectedToken = tokens.find(token => token.address === value);
+                    setToToken(selectedToken || null);
                   }}
                   disabled={isExecuting}
                 >
@@ -504,7 +507,7 @@ export function UnifiedSwapInterface({
                     ))}
                     <Separator />
                     {/* All tokens */}
-                    {Object.values(getAvailableTokens(toChain)).map((token) => (
+                    {getAvailableTokens(toChain).map((token) => (
                       <SelectItem key={token.address} value={token.address}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">

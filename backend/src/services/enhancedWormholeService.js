@@ -1,8 +1,7 @@
-import { wormhole } from '@wormhole-foundation/sdk';
+import { wormhole, Wormhole, amount } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
 import sui from '@wormhole-foundation/sdk/sui';
 import { ethers } from 'ethers';
-import { TokenId, TokenTransfer, amount } from '@wormhole-foundation/sdk';
 
 /**
  * Enhanced Wormhole Service - Extends basic bridging with quote functionality
@@ -163,20 +162,23 @@ export class EnhancedWormholeService {
       const fromChainContext = this.wh.getChain(this._getChainName(fromChain));
       const toChainContext = this.wh.getChain(this._getChainName(toChain));
 
-      // Create token ID
-      const tokenId = TokenId.fromString(`${this._getChainName(fromChain)}:${fromTokenAddress}`);
+      // Create token ID using Wormhole.tokenId
+      const tokenId = Wormhole.tokenId(this._getChainName(fromChain), fromTokenAddress);
 
       // Convert amount to proper format
       const transferAmount = amount.units(amount.parse(amount, decimals));
 
-      // Get quote for transfer
-      const quote = await TokenTransfer.quoteTransfer(
-        this.wh,
-        fromChainContext,
+      // Create transfer object first
+      const xfer = await this.wh.tokenTransfer(
         tokenId,
         transferAmount,
-        toChainContext
+        { chain: this._getChainName(fromChain), address: fromAddress },
+        { chain: this._getChainName(toChain), address: toAddress },
+        false // Manual transfer
       );
+
+      // Get quote for transfer
+      const quote = await xfer.quoteTransfer();
 
       // Calculate fees
       const bridgeFee = quote.fee;
@@ -261,9 +263,9 @@ export class EnhancedWormholeService {
       const fromChainContext = this.wh.getChain(this._getChainName(fromChain));
       const toChainContext = this.wh.getChain(this._getChainName(toChain));
 
-      // Create token ID
+      // Create token ID using Wormhole.tokenId
       const fromTokenAddress = this.supportedTokens[fromChain][token];
-      const tokenId = TokenId.fromString(`${this._getChainName(fromChain)}:${fromTokenAddress}`);
+      const tokenId = Wormhole.tokenId(this._getChainName(fromChain), fromTokenAddress);
 
       // Convert amount to proper format
       const decimals = this.tokenDecimals[token];
