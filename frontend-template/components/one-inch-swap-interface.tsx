@@ -63,8 +63,17 @@ export function OneInchSwapInterface({ defaultNetwork = "ethereum" }: OneInchSwa
     let isCancelled = false;
 
     const loadTokens = async () => {
+      console.log("🔄 loadTokens called - this should only happen on network change!", {
+        currentChainId,
+        hasFromToken: !!fromToken,
+        hasToToken: !!toToken,
+        fromTokenSymbol: fromToken?.symbol,
+        toTokenSymbol: toToken?.symbol
+      });
+
       try {
         // Reset tokens and quote, but preserve user input amounts
+        console.log("🔄 Clearing tokens and quote due to network change");
         setFromToken(null);
         setToToken(null);
         setQuote(null);
@@ -90,12 +99,14 @@ export function OneInchSwapInterface({ defaultNetwork = "ethereum" }: OneInchSwa
           t.address.toLowerCase() === currentNetwork.nativeToken.address.toLowerCase()
         );
         if (nativeToken && !isCancelled) {
+          console.log("🔄 Setting default from token:", nativeToken.symbol);
           setFromToken(nativeToken);
         }
 
         // Set default to token (USDC if available)
         const usdcToken = Object.values(tokens).find(t => t.symbol === 'USDC');
         if (usdcToken && !isCancelled) {
+          console.log("🔄 Setting default to token:", usdcToken.symbol);
           setToToken(usdcToken);
         }
       } catch (error) {
@@ -112,7 +123,7 @@ export function OneInchSwapInterface({ defaultNetwork = "ethereum" }: OneInchSwa
       isCancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [currentChainId, oneInchService]);
+  }, [currentChainId]);
 
   // Get wallet balance for selected token
   const getFromTokenBalance = useCallback(() => {
@@ -163,6 +174,10 @@ export function OneInchSwapInterface({ defaultNetwork = "ethereum" }: OneInchSwa
           outputAmount: formatTokenAmount(quoteData.dstAmount, toToken.decimals),
           quote: quoteData
         });
+        console.log("💾 Setting quote and toAmount:", {
+          quote: quoteData,
+          formattedAmount: formatTokenAmount(quoteData.dstAmount, toToken.decimals)
+        });
         setQuote(quoteData);
         const formattedAmount = formatTokenAmount(quoteData.dstAmount, toToken.decimals);
         setToAmount(formattedAmount);
@@ -171,7 +186,7 @@ export function OneInchSwapInterface({ defaultNetwork = "ethereum" }: OneInchSwa
       console.error("❌ Failed to fetch quote:", error);
       // Don't clear quote and toAmount on error - keep previous values
     }
-  }, [fromAmount, fromToken, toToken, currentChainId, oneInchService, ethereum.wallet.isConnected]);
+  }, [fromAmount, fromToken, toToken, currentChainId, ethereum.wallet.isConnected]);
 
   // Calculate quote when parameters change
   useEffect(() => {

@@ -9,6 +9,7 @@ import { OneInchService } from './services/oneInchService.js';
 import { SuiService } from './services/suiService.js';
 import { ResolverBot } from './services/resolverBot.js';
 import { WebSocketService } from './services/websocketService.js';
+import { LimitOrderService } from './services/limitOrderService.js';
 
 // Import routes
 import swapRoutes from './routes/swap.js';
@@ -17,6 +18,9 @@ import resolverRoutes from './routes/resolver.js';
 import healthRoutes from './routes/health.js';
 import crossChainSwapRoutes from './routes/crossChainSwap.js';
 import oneInchSwapRoutes from './routes/oneInchSwap.js';
+import limitOrderRoutes from './routes/limitOrders.js';
+import enhancedStrategiesRoutes from './routes/enhancedStrategies.js';
+import unifiedSwapRoutes from './routes/unifiedSwap.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -83,6 +87,14 @@ class ManteiaServer {
       apiKey: process.env.ONEINCH_API_KEY,
       baseUrl: process.env.ONEINCH_API_BASE_URL || 'https://api.1inch.dev',
       logger: this.logger
+    });
+
+    // Initialize enhanced limit order service
+    this.services.limitOrder = new LimitOrderService({
+      apiKey: process.env.ONEINCH_API_KEY,
+      baseUrl: process.env.ONEINCH_API_BASE_URL || 'https://api.1inch.dev',
+      logger: this.logger,
+      oneInchService: this.services.oneInch
     });
 
     // Initialize Sui service
@@ -217,6 +229,15 @@ class ManteiaServer {
     // 1inch multi-network swap routes
     this.app.use('/api/1inch', oneInchSwapRoutes);
 
+    // Enhanced limit order routes
+    this.app.use('/api/limit-orders', limitOrderRoutes);
+
+    // Enhanced strategies routes
+    this.app.use('/api/enhanced-strategies', enhancedStrategiesRoutes);
+
+    // Unified cross-chain swap routes
+    this.app.use('/api/unified-swap', unifiedSwapRoutes);
+
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
@@ -229,7 +250,10 @@ class ManteiaServer {
           orders: '/api/v1/orders',
           resolver: '/api/v1/resolver',
           crossChainSwap: '/api/swap',
-          oneInchSwap: '/api/1inch'
+          oneInchSwap: '/api/1inch',
+          limitOrders: '/api/limit-orders',
+          enhancedStrategies: '/api/enhanced-strategies',
+          unifiedSwap: '/api/unified-swap'
         }
       });
     });
