@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useOneInchIntegration } from "./use-1inch-integration";
+import { useCetusIntegration } from "./use-cetus-integration";
 
 /**
  * Hook for Manteia Backend API Integration
@@ -51,6 +53,10 @@ interface HealthResponse {
 export function useManteiaApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Integration hooks
+  const oneInch = useOneInchIntegration();
+  const cetus = useCetusIntegration();
 
   // Generic API call function
   const apiCall = useCallback(async <T>(
