@@ -1,0 +1,14 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0xD21d0d342Ef6054b72840D80B24Bf79D5BA6a145",
+  "contracts": {
+    "BridgeAdapter": "0x42A7AC30B8fbE1Ac32f47A62553468Cc2cc463EA",
+    "SwapCoordinator": "0x4E2cB550463D598CeD89443EC4d5d19861172aa5"
+  },
+  "dependencies": {
+    "WormholeTokenBridge": "0xDB5492265f6038831E89f495670FF909aDe94bd9",
+    "USDCToken": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+  },
+  "deployedAt": "2025-08-01T17:24:29.064Z"
+}

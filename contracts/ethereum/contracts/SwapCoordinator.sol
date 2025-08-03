@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -129,7 +129,7 @@ contract SwapCoordinator is Ownable, ReentrancyGuard, Pausable {
      * @param _bridgeAdapter Address of the BridgeAdapter contract
      * @param _feeCollector Address to collect platform fees
      */
-    constructor(address _bridgeAdapter, address _feeCollector) {
+    constructor(address _bridgeAdapter, address _feeCollector) Ownable(msg.sender) {
         require(_bridgeAdapter != address(0), "Invalid bridge adapter");
         require(_feeCollector != address(0), "Invalid fee collector");
 

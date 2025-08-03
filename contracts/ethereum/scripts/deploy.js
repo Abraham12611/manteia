@@ -20,8 +20,15 @@ async function main() {
   } else if (chainId === 1n) { // Mainnet
     wormholeTokenBridge = "0x3ee18B2214AFF97000D974cf647E7C347E8fa585";
     usdcToken = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // USDC on Mainnet
+  } else if (chainId === 31337n) { // Localhost/Hardhat
+    // For localhost development, we'll use placeholder addresses
+    // In a full implementation, you'd deploy mock contracts here
+    console.log("⚠️  Localhost deployment: Using placeholder addresses for development");
+    console.log("   For full testing, consider deploying mock USDC and Wormhole contracts");
+    wormholeTokenBridge = "0x1111111111111111111111111111111111111111"; // Placeholder
+    usdcToken = "0x2222222222222222222222222222222222222222"; // Placeholder
   } else {
-    throw new Error(`Unsupported network: ${network.name}`);
+    throw new Error(`Unsupported network: ${network.name} (Chain ID: ${chainId})`);
   }
 
   console.log("Using Wormhole TokenBridge:", wormholeTokenBridge);
