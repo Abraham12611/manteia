@@ -204,9 +204,19 @@ export class ResolverBot extends EventEmitter {
   }
 
   async handleFusionOrders(orders) {
+    // Ensure orders is an array
+    if (!orders || !Array.isArray(orders)) {
+      this.logger.warn('Invalid orders data received:', { orders, type: typeof orders });
+      return;
+    }
+
     for (const order of orders) {
-      if (this.isCrossChainOrder(order)) {
-        await this.handleFusionCrossChainOrder(order);
+      try {
+        if (this.isCrossChainOrder(order)) {
+          await this.handleFusionCrossChainOrder(order);
+        }
+      } catch (error) {
+        this.logger.error('Error handling individual order:', error, { orderId: order?.id });
       }
     }
   }

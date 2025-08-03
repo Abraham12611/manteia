@@ -1,4 +1,4 @@
-import { wormhole, amount, TokenId, TokenTransfer } from '@wormhole-foundation/sdk';
+import { wormhole } from '@wormhole-foundation/sdk';
 import evm from '@wormhole-foundation/sdk/evm';
 import sui from '@wormhole-foundation/sdk/sui';
 import { ethers } from 'ethers';

@@ -121,7 +121,7 @@ export function useCrossChainSwap(): UseCrossChainSwapReturn {
   const [swapError, setSwapError] = useState<string | null>(null);
 
   // Backend API base URL
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://84.32.100.59:3001";
 
   // Supported tokens based on our backend services
   const SUPPORTED_TOKENS = {

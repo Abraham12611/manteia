@@ -88,7 +88,7 @@ class ManteiaServer {
     this.services.sui = new SuiService({
       rpcUrl: process.env.SUI_RPC_URL || 'https://fullnode.testnet.sui.io:443',
       privateKey: process.env.SUI_PRIVATE_KEY,
-      packageId: process.env.SUI_PACKAGE_ID,
+      packageId: process.env.SUI_PACKAGE_ID || '0x468edb99a7d83ed2464eb25feb229e6d21d47b0f382c90ac5b57a393e26084fe',
       logger: this.logger
     });
 
@@ -152,10 +152,37 @@ class ManteiaServer {
     // Security middleware
     this.app.use(helmet());
 
-    // CORS configuration
+    // CORS configuration - Allow all localhost ports during development
     this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-      credentials: true
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // Allow all localhost ports during development
+        if (origin.match(/^http:\/\/localhost:\d+$/)) {
+          return callback(null, true);
+        }
+
+        // Allow remote server IP and ports
+        if (origin.match(/^http:\/\/84\.32\.100\.59:\d+$/)) {
+          return callback(null, true);
+        }
+
+        // Allow specific origins from environment
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+          'http://localhost:3000',
+          'http://84.32.100.59:3000',
+          'http://84.32.100.59:52357'
+        ];
+        if (allowedOrigins.indexOf(origin) !== -1) {
+          return callback(null, true);
+        }
+
+        return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
     }));
 
     // Rate limiting

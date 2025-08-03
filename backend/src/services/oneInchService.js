@@ -511,7 +511,7 @@ export class OneInchService {
   createTimePredicate(startTime, endTime) {
     // This would be the actual predicate bytecode for time-based orders
     // For demo purposes, returning a placeholder
-    return ethers.utils.defaultAbiCoder.encode(
+    return ethers.AbiCoder.defaultAbiCoder().encode(
       ['uint256', 'uint256'],
       [startTime, endTime]
     );
@@ -520,7 +520,7 @@ export class OneInchService {
   createPricePredicate(token, strikePrice, optionType, expiry) {
     // This would be the actual predicate bytecode for price-based orders
     // For demo purposes, returning a placeholder
-    return ethers.utils.defaultAbiCoder.encode(
+    return ethers.AbiCoder.defaultAbiCoder().encode(
       ['address', 'uint256', 'uint8', 'uint256'],
       [token, strikePrice, optionType === 'call' ? 1 : 0, expiry]
     );
@@ -1022,7 +1022,7 @@ export class OneInchService {
    * @private
    */
   async _callSwapAPI(endpoint, params, chainId) {
-    const baseUrl = `https://api.1inch.dev/swap/v6.1/${chainId}`;
+    const baseUrl = `https://api.1inch.dev/swap/v6.0/${chainId}`;
 
     const url = new URL(baseUrl + endpoint);
     if (params && Object.keys(params).length > 0) {

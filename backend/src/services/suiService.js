@@ -397,12 +397,19 @@ export class SuiService {
 
     const pollEvents = async () => {
       try {
-        // Query events from the last timestamp
+        // Skip event polling if package ID is not properly configured
+        if (!this.packageId || this.packageId === '0xa0e69087f523c27842895a5d2d390b7d4e24ec9533f79d9bae08348db3b0a20e') {
+          // Old/placeholder package ID - skip polling
+          return;
+        }
+
+        // Query events from the package with proper filter
         const events = await this.client.queryEvents({
-          query: { Package: this.packageId },
-          cursor: null,
-          limit: 50,
-          order: 'ascending'
+          query: {
+            MoveEventType: `${this.packageId}::bridge_handler::BridgeRequestReceived`
+          },
+          limit: 10,
+          order: 'descending'
         });
 
         // Process new events
