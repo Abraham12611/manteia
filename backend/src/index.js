@@ -20,6 +20,7 @@ import crossChainSwapRoutes from './routes/crossChainSwap.js';
 import oneInchSwapRoutes from './routes/oneInchSwap.js';
 import limitOrderRoutes from './routes/limitOrders.js';
 import enhancedStrategiesRoutes from './routes/enhancedStrategies.js';
+import unifiedSwapRoutes from './routes/unifiedSwap.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -234,6 +235,9 @@ class ManteiaServer {
     // Enhanced strategies routes
     this.app.use('/api/enhanced-strategies', enhancedStrategiesRoutes);
 
+    // Unified cross-chain swap routes
+    this.app.use('/api/unified-swap', unifiedSwapRoutes);
+
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
@@ -248,7 +252,8 @@ class ManteiaServer {
           crossChainSwap: '/api/swap',
           oneInchSwap: '/api/1inch',
           limitOrders: '/api/limit-orders',
-          enhancedStrategies: '/api/enhanced-strategies'
+          enhancedStrategies: '/api/enhanced-strategies',
+          unifiedSwap: '/api/unified-swap'
         }
       });
     });
