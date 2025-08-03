@@ -701,4 +701,347 @@ export class OneInchService {
       }
     }
   }
+
+  // Classic Swap API Methods for ETH/USDC swaps
+
+  /**
+   * Build swap transaction from ETH to USDC
+   * @param {Object} params - Swap parameters
+   * @param {string} params.amount - ETH amount in wei
+   * @param {string} params.fromAddress - Sender address
+   * @param {number} params.slippage - Slippage tolerance (e.g., 1 for 1%)
+   * @param {number} params.chainId - Chain ID (1 for Ethereum mainnet, 11155111 for Sepolia)
+   * @returns {Promise<Object>} Swap transaction data
+   */
+  async buildETHToUSDCSwap(params) {
+    try {
+      const { amount, fromAddress, slippage = 1, chainId = 1 } = params;
+
+      // Token addresses
+      const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'; // 1inch ETH placeholder
+      const USDC_ADDRESS = chainId === 1
+        ? '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' // Mainnet USDC
+        : '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'; // Sepolia USDC
+
+      this.logger.info(`Building ETH to USDC swap: ${amount} wei`);
+
+      // First get a quote to ensure the swap is viable
+      const quote = await this.getSwapQuote({
+        src: ETH_ADDRESS,
+        dst: USDC_ADDRESS,
+        amount,
+        chainId
+      });
+
+      if (!quote.success) {
+        throw new Error(`Quote failed: ${quote.error}`);
+      }
+
+      // Build the actual swap transaction
+      const swapParams = {
+        src: ETH_ADDRESS,
+        dst: USDC_ADDRESS,
+        amount: amount,
+        from: fromAddress,
+        slippage: slippage.toString(),
+        disableEstimate: 'false',
+        allowPartialFill: 'false'
+      };
+
+      const swapTx = await this._callSwapAPI('/swap', swapParams, chainId);
+
+      this.logger.info('ETH to USDC swap transaction built:', {
+        expectedOutput: quote.toAmount,
+        gasEstimate: swapTx.tx.gas
+      });
+
+      return {
+        success: true,
+        transaction: swapTx.tx,
+        quote: quote,
+        expectedOutput: quote.toAmount
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to build ETH to USDC swap:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Build swap transaction from USDC to ETH
+   * @param {Object} params - Swap parameters
+   * @param {string} params.amount - USDC amount (with 6 decimals)
+   * @param {string} params.fromAddress - Sender address
+   * @param {number} params.slippage - Slippage tolerance (e.g., 1 for 1%)
+   * @param {number} params.chainId - Chain ID
+   * @returns {Promise<Object>} Swap transaction data
+   */
+  async buildUSDCToETHSwap(params) {
+    try {
+      const { amount, fromAddress, slippage = 1, chainId = 1 } = params;
+
+      // Token addresses
+      const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+      const USDC_ADDRESS = chainId === 1
+        ? '0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+        : '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+
+      this.logger.info(`Building USDC to ETH swap: ${amount} USDC`);
+
+      // Check allowance first
+      const allowanceCheck = await this.checkTokenAllowance({
+        tokenAddress: USDC_ADDRESS,
+        walletAddress: fromAddress,
+        chainId
+      });
+
+      if (!allowanceCheck.success) {
+        return {
+          success: false,
+          error: 'Failed to check token allowance',
+          details: allowanceCheck.error
+        };
+      }
+
+      // If allowance is insufficient, return approval transaction
+      const requiredAmount = BigInt(amount);
+      const currentAllowance = BigInt(allowanceCheck.allowance);
+
+      if (currentAllowance < requiredAmount) {
+        const approvalTx = await this.buildApprovalTransaction({
+          tokenAddress: USDC_ADDRESS,
+          amount: amount,
+          chainId
+        });
+
+        return {
+          success: true,
+          requiresApproval: true,
+          approvalTransaction: approvalTx.transaction,
+          message: 'Token approval required before swap'
+        };
+      }
+
+      // Get quote
+      const quote = await this.getSwapQuote({
+        src: USDC_ADDRESS,
+        dst: ETH_ADDRESS,
+        amount,
+        chainId
+      });
+
+      if (!quote.success) {
+        throw new Error(`Quote failed: ${quote.error}`);
+      }
+
+      // Build swap transaction
+      const swapParams = {
+        src: USDC_ADDRESS,
+        dst: ETH_ADDRESS,
+        amount: amount,
+        from: fromAddress,
+        slippage: slippage.toString(),
+        disableEstimate: 'false',
+        allowPartialFill: 'false'
+      };
+
+      const swapTx = await this._callSwapAPI('/swap', swapParams, chainId);
+
+      this.logger.info('USDC to ETH swap transaction built:', {
+        expectedOutput: quote.toAmount,
+        gasEstimate: swapTx.tx.gas
+      });
+
+      return {
+        success: true,
+        transaction: swapTx.tx,
+        quote: quote,
+        expectedOutput: quote.toAmount
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to build USDC to ETH swap:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get swap quote without building transaction
+   * @param {Object} params - Quote parameters
+   * @returns {Promise<Object>} Quote result
+   */
+  async getSwapQuote(params) {
+    try {
+      const { src, dst, amount, chainId = 1 } = params;
+
+      const quoteParams = {
+        src,
+        dst,
+        amount
+      };
+
+      const quote = await this._callSwapAPI('/quote', quoteParams, chainId);
+
+      return {
+        success: true,
+        fromAmount: quote.fromTokenAmount,
+        toAmount: quote.toTokenAmount,
+        estimatedGas: quote.estimatedGas,
+        protocols: quote.protocols
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get swap quote:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Check token allowance for 1inch router
+   * @param {Object} params - Allowance parameters
+   * @returns {Promise<Object>} Allowance result
+   */
+  async checkTokenAllowance(params) {
+    try {
+      const { tokenAddress, walletAddress, chainId = 1 } = params;
+
+      const allowanceParams = {
+        tokenAddress,
+        walletAddress
+      };
+
+      const response = await this._callSwapAPI('/approve/allowance', allowanceParams, chainId);
+
+      return {
+        success: true,
+        allowance: response.allowance
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to check token allowance:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Build token approval transaction
+   * @param {Object} params - Approval parameters
+   * @returns {Promise<Object>} Approval transaction
+   */
+  async buildApprovalTransaction(params) {
+    try {
+      const { tokenAddress, amount, chainId = 1 } = params;
+
+      const approvalParams = {
+        tokenAddress,
+        amount
+      };
+
+      const approveTx = await this._callSwapAPI('/approve/transaction', approvalParams, chainId);
+
+      return {
+        success: true,
+        transaction: {
+          to: approveTx.to,
+          data: approveTx.data,
+          value: approveTx.value,
+          gas: approveTx.gas
+        }
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to build approval transaction:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get spender address for token approvals
+   * @param {number} chainId - Chain ID
+   * @returns {Promise<Object>} Spender address
+   */
+  async getSpenderAddress(chainId = 1) {
+    try {
+      const response = await this._callSwapAPI('/approve/spender', {}, chainId);
+
+      return {
+        success: true,
+        spender: response.address
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get spender address:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get available tokens for a chain
+   * @param {number} chainId - Chain ID
+   * @returns {Promise<Object>} Available tokens
+   */
+  async getAvailableTokens(chainId = 1) {
+    try {
+      const response = await this._callSwapAPI('/tokens', {}, chainId);
+
+      return {
+        success: true,
+        tokens: response.tokens
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get available tokens:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Helper method to call 1inch Swap API
+   * @private
+   */
+  async _callSwapAPI(endpoint, params, chainId) {
+    const baseUrl = `https://api.1inch.dev/swap/v6.1/${chainId}`;
+
+    const url = new URL(baseUrl + endpoint);
+    if (params && Object.keys(params).length > 0) {
+      url.search = new URLSearchParams(params).toString();
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`1inch API error ${response.status}: ${errorBody}`);
+    }
+
+    return await response.json();
+  }
 }

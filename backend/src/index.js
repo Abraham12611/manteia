@@ -15,6 +15,7 @@ import swapRoutes from './routes/swap.js';
 import orderRoutes from './routes/orders.js';
 import resolverRoutes from './routes/resolver.js';
 import healthRoutes from './routes/health.js';
+import crossChainSwapRoutes from './routes/crossChainSwap.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -182,6 +183,9 @@ class ManteiaServer {
     this.app.use('/api/v1/orders', orderRoutes);
     this.app.use('/api/v1/resolver', resolverRoutes);
 
+    // New cross-chain swap routes
+    this.app.use('/api/swap', crossChainSwapRoutes);
+
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
@@ -192,7 +196,8 @@ class ManteiaServer {
           health: '/api/v1/health',
           swap: '/api/v1/swap',
           orders: '/api/v1/orders',
-          resolver: '/api/v1/resolver'
+          resolver: '/api/v1/resolver',
+          crossChainSwap: '/api/swap'
         }
       });
     });
