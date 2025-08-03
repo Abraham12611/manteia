@@ -152,13 +152,15 @@ export function StrategyWizard({
                 <h4 className="font-medium">Configuration Summary</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(config).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between p-3 rounded-lg border">
-                      <span className="text-sm font-medium capitalize">
-                        {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </span>
+                    <div key={key} className="p-3 rounded-lg border">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium capitalize text-foreground">
+                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                        </div>
+                        <div className="text-sm text-muted-foreground break-words">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

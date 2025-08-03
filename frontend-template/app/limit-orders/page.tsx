@@ -74,7 +74,7 @@ export default function LimitOrdersPage() {
           <div className="space-y-6">
             {/* Strategy Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary-to/5">
+              <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/10 to-primary-to/10">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <Activity className="h-5 w-5 text-primary" />
@@ -87,10 +87,10 @@ export default function LimitOrdersPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
+              <Card className="border-2 border-green-300/50 bg-gradient-to-br from-green-950/20 to-emerald-950/20">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-green-400" />
                     <CardTitle className="text-sm">Total Value</CardTitle>
                   </div>
                 </CardHeader>
@@ -100,10 +100,10 @@ export default function LimitOrdersPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+              <Card className="border-2 border-blue-300/50 bg-gradient-to-br from-blue-950/20 to-cyan-950/20">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-blue-600" />
+                    <Target className="h-5 w-5 text-blue-400" />
                     <CardTitle className="text-sm">Success Rate</CardTitle>
                   </div>
                 </CardHeader>
@@ -113,10 +113,10 @@ export default function LimitOrdersPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50">
+              <Card className="border-2 border-purple-300/50 bg-gradient-to-br from-purple-950/20 to-violet-950/20">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-purple-600" />
+                    <Zap className="h-5 w-5 text-purple-400" />
                     <CardTitle className="text-sm">Strategies</CardTitle>
                   </div>
                 </CardHeader>
@@ -199,9 +199,9 @@ export default function LimitOrdersPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-blue-950/20 to-cyan-950/20 border border-blue-300/50">
                         <div className="flex items-center gap-3">
-                          <ArrowUpDown className="h-5 w-5 text-blue-600" />
+                          <ArrowUpDown className="h-5 w-5 text-blue-400" />
                           <div>
                             <p className="font-medium text-sm">Enhanced TWAP</p>
                             <p className="text-xs text-muted-foreground">Time-weighted execution with slippage protection</p>
@@ -209,9 +209,9 @@ export default function LimitOrdersPage() {
                         </div>
                         <Badge variant="secondary">Execution</Badge>
                       </div>
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-950/20 to-violet-950/20 border border-purple-300/50">
                         <div className="flex items-center gap-3">
-                          <Target className="h-5 w-5 text-purple-600" />
+                          <Target className="h-5 w-5 text-purple-400" />
                           <div>
                             <p className="font-medium text-sm">Barrier Options</p>
                             <p className="text-xs text-muted-foreground">Knock-in/knock-out options with barrier monitoring</p>
@@ -219,9 +219,9 @@ export default function LimitOrdersPage() {
                         </div>
                         <Badge variant="secondary">Options</Badge>
                       </div>
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-950/20 to-emerald-950/20 border border-green-300/50">
                         <div className="flex items-center gap-3">
-                          <Shield className="h-5 w-5 text-green-600" />
+                          <Shield className="h-5 w-5 text-green-400" />
                           <div>
                             <p className="font-medium text-sm">Delta Hedging</p>
                             <p className="text-xs text-muted-foreground">Automatic delta-neutral positioning</p>

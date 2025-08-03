@@ -184,10 +184,10 @@ export default function CreateStrategyPage() {
                     {STRATEGY_TYPES.map((strategy) => {
                       const IconComponent = strategy.icon;
                       const colorClasses = {
-                        blue: "border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100",
-                        purple: "border-purple-200 bg-gradient-to-br from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100",
-                        green: "border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100",
-                        orange: "border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100"
+                        blue: "border-blue-300/50 bg-gradient-to-br from-blue-950/20 to-cyan-950/20 hover:from-blue-950/30 hover:to-cyan-950/30",
+                        purple: "border-purple-300/50 bg-gradient-to-br from-purple-950/20 to-violet-950/20 hover:from-purple-950/30 hover:to-violet-950/30",
+                        green: "border-green-300/50 bg-gradient-to-br from-green-950/20 to-emerald-950/20 hover:from-green-950/30 hover:to-emerald-950/30",
+                        orange: "border-orange-300/50 bg-gradient-to-br from-orange-950/20 to-amber-950/20 hover:from-orange-950/30 hover:to-amber-950/30"
                       };
 
                       return (
@@ -198,8 +198,8 @@ export default function CreateStrategyPage() {
                         >
                           <CardHeader>
                             <div className="flex items-center gap-3">
-                              <div className={`p-2 rounded-lg bg-${strategy.color}-100`}>
-                                <IconComponent className={`h-6 w-6 text-${strategy.color}-600`} />
+                              <div className={`p-2 rounded-lg bg-${strategy.color}-950/20`}>
+                                <IconComponent className={`h-6 w-6 text-${strategy.color}-400`} />
                               </div>
                               <div className="flex-1">
                                 <CardTitle className="text-lg">{strategy.name}</CardTitle>

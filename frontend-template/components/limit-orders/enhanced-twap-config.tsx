@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Info,
   Zap,
@@ -17,14 +18,19 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle,
-  ArrowUpDown
+  ArrowUpDown,
+  RefreshCw
 } from "lucide-react";
-import { useTokenList } from "@/hooks/use-token-list";
+import { useOneInchService } from "@/hooks/use-1inch-service";
+import { SUPPORTED_NETWORKS } from "@/lib/networks";
 
 interface EnhancedTWAPConfigProps {
   config: any;
   onChange: (config: any) => void;
 }
+
+// Popular tokens to show by default
+const DEFAULT_TOKENS_TO_SHOW = ['ETH', 'USDC', 'USDT', 'WBTC', 'DAI', 'WETH', 'UNI', 'LINK', 'ARB', 'OP', 'MATIC', 'AVAX'];
 
 /**
  * Enhanced TWAP Configuration Component
@@ -57,14 +63,56 @@ export function EnhancedTWAPConfig({ config, onChange }: EnhancedTWAPConfigProps
     }
   });
 
-  const { tokens, isLoading: tokensLoading } = useTokenList(localConfig.chainId);
+  // Use real 1inch service
+  const oneInchService = useOneInchService();
+  const [availableTokens, setAvailableTokens] = useState<Record<string, any>>({});
+  const [popularTokens, setPopularTokens] = useState<any[]>([]);
+  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
 
   useEffect(() => {
     setLocalConfig(prev => ({ ...prev, ...config }));
   }, [config]);
 
+  // Load tokens when chainId changes
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadTokens = async () => {
+      try {
+        setIsLoadingTokens(true);
+        setAvailableTokens({});
+        setPopularTokens([]);
+
+        const tokens = await oneInchService.getTokens(localConfig.chainId);
+
+        if (isCancelled) return;
+
+        setAvailableTokens(tokens);
+
+        // Filter popular tokens
+        const popular = Object.values(tokens).filter((token: any) =>
+          DEFAULT_TOKENS_TO_SHOW.includes(token.symbol)
+        ).slice(0, 10);
+
+        setPopularTokens(popular);
+      } catch (error) {
+        console.error('Failed to load tokens:', error);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingTokens(false);
+        }
+      }
+    };
+
+    loadTokens();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [localConfig.chainId]); // Removed oneInchService from dependencies
+
   const handleConfigChange = (key: string, value: any) => {
-    const newConfig = { ...localConfig };
+    const newConfig = { ...localConfig } as any;
 
     if (key.includes('.')) {
       const [parent, child] = key.split('.');
@@ -87,6 +135,13 @@ export function EnhancedTWAPConfig({ config, onChange }: EnhancedTWAPConfigProps
     const duration = localConfig.duration;
     const intervals = localConfig.intervals;
     return intervals > 0 ? Math.floor(duration / intervals) : 0;
+  };
+
+  // Helper function to get token display info
+  const getTokenDisplayInfo = (address: string) => {
+    const token = availableTokens[address];
+    if (!token) return { symbol: 'Unknown', name: 'Unknown Token' };
+    return { symbol: token.symbol, name: token.name };
   };
 
   return (
@@ -114,11 +169,17 @@ export function EnhancedTWAPConfig({ config, onChange }: EnhancedTWAPConfigProps
                   <SelectValue placeholder="Select network" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Ethereum Mainnet</SelectItem>
-                  <SelectItem value="42161">Arbitrum One</SelectItem>
-                  <SelectItem value="10">Optimism</SelectItem>
-                  <SelectItem value="137">Polygon</SelectItem>
-                  <SelectItem value="8453">Base</SelectItem>
+                  {Object.entries(SUPPORTED_NETWORKS).map(([key, network]) => (
+                    <SelectItem key={key} value={network.chainId.toString()}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-4 w-4">
+                          <AvatarImage src={network.logoUrl} alt={network.name} />
+                          <AvatarFallback>{network.symbol}</AvatarFallback>
+                        </Avatar>
+                        {network.name}
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -141,16 +202,65 @@ export function EnhancedTWAPConfig({ config, onChange }: EnhancedTWAPConfigProps
               <Select
                 value={localConfig.makerAsset}
                 onValueChange={(value) => handleConfigChange('makerAsset', value)}
+                disabled={isLoadingTokens}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select token to sell" />
+                  <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token to sell"}>
+                    {localConfig.makerAsset && (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-4 w-4">
+                          <AvatarImage src={availableTokens[localConfig.makerAsset]?.logoURI} alt={getTokenDisplayInfo(localConfig.makerAsset).symbol} />
+                          <AvatarFallback className="text-xs">{getTokenDisplayInfo(localConfig.makerAsset).symbol[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{getTokenDisplayInfo(localConfig.makerAsset).symbol}</span>
+                      </div>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {tokens?.map((token) => (
-                    <SelectItem key={token.address} value={token.address}>
-                      {token.symbol} - {token.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingTokens ? (
+                    <div className="flex items-center gap-2 p-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Loading tokens...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Popular tokens first */}
+                      {popularTokens.length > 0 && (
+                        <>
+                          <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Popular</div>
+                          {popularTokens.map((token: any) => (
+                            <SelectItem key={token.address} value={token.address}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-4 w-4">
+                                  <AvatarImage src={token.logoURI} alt={token.symbol} />
+                                  <AvatarFallback className="text-xs">{token.symbol[0]}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{token.symbol}</span>
+                                <span className="text-xs text-muted-foreground">{token.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          <Separator />
+                        </>
+                      )}
+
+                      {/* All tokens */}
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">All Tokens</div>
+                      {Object.values(availableTokens).slice(0, 50).map((token: any) => (
+                        <SelectItem key={token.address} value={token.address}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={token.logoURI} alt={token.symbol} />
+                              <AvatarFallback className="text-xs">{token.symbol[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{token.symbol}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-32">{token.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -160,16 +270,65 @@ export function EnhancedTWAPConfig({ config, onChange }: EnhancedTWAPConfigProps
               <Select
                 value={localConfig.takerAsset}
                 onValueChange={(value) => handleConfigChange('takerAsset', value)}
+                disabled={isLoadingTokens}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select token to buy" />
+                  <SelectValue placeholder={isLoadingTokens ? "Loading tokens..." : "Select token to buy"}>
+                    {localConfig.takerAsset && (
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-4 w-4">
+                          <AvatarImage src={availableTokens[localConfig.takerAsset]?.logoURI} alt={getTokenDisplayInfo(localConfig.takerAsset).symbol} />
+                          <AvatarFallback className="text-xs">{getTokenDisplayInfo(localConfig.takerAsset).symbol[0]}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{getTokenDisplayInfo(localConfig.takerAsset).symbol}</span>
+                      </div>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {tokens?.map((token) => (
-                    <SelectItem key={token.address} value={token.address}>
-                      {token.symbol} - {token.name}
-                    </SelectItem>
-                  ))}
+                  {isLoadingTokens ? (
+                    <div className="flex items-center gap-2 p-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span className="text-sm">Loading tokens...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Popular tokens first */}
+                      {popularTokens.length > 0 && (
+                        <>
+                          <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Popular</div>
+                          {popularTokens.map((token: any) => (
+                            <SelectItem key={token.address} value={token.address}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-4 w-4">
+                                  <AvatarImage src={token.logoURI} alt={token.symbol} />
+                                  <AvatarFallback className="text-xs">{token.symbol[0]}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{token.symbol}</span>
+                                <span className="text-xs text-muted-foreground">{token.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                          <Separator />
+                        </>
+                      )}
+
+                      {/* All tokens */}
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">All Tokens</div>
+                      {Object.values(availableTokens).slice(0, 50).map((token: any) => (
+                        <SelectItem key={token.address} value={token.address}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage src={token.logoURI} alt={token.symbol} />
+                              <AvatarFallback className="text-xs">{token.symbol[0]}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{token.symbol}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-32">{token.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>
