@@ -101,7 +101,7 @@ export function useOneInchIntegration() {
       setLoading(true);
       setError(null);
 
-      // Real 1inch Aggregation API v6.0 call
+      // 1inch Aggregation API v6.0 call
       const response = await fetch(
         `https://api.1inch.dev/swap/v6.0/${chainId}/quote?` + new URLSearchParams({
           src: fromToken,
